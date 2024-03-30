@@ -129,10 +129,6 @@ namespace BDxGraphiK
 			if (stp.ElapsedMilliseconds > lastSecond + 1000)
 			{
 				float divide = 1f;
-				if (glControl2.Visible)
-					divide++;
-				if (glControl3.Visible)
-					divide++;
 				
 				this.Text = ((totalTicks - lastTick) / (divide * 3f)) +"FPS";
 				lastTick = totalTicks;
