@@ -24,6 +24,7 @@ using System.Security.Policy;
 using static BDxGraphiK.Mesh;
 using static System.Net.WebRequestMethods;
 using static BDxGraphiK.MDLX;
+using System.Runtime.Remoting.Messaging;
 
 namespace BDxGraphiK
 {
@@ -88,6 +89,8 @@ namespace BDxGraphiK
 		}
 
 		MDLX.RAM_Model map;
+		const int GRAPHICS_ACTIVITY_PTR = 0x0032BAD8;
+		const int PLAYER_ACTIVITY_PTR = 0x00349E1C;
 
 		Stopwatch stp = new Stopwatch();
 
@@ -103,66 +106,117 @@ namespace BDxGraphiK
 			string mapName = "m" + stream.ReadString(0x00348D69, 31, true);
 
 			/* Graphics active */
-			if (stream.ReadInt32(0x0032BAD8) == 1)
+			if (stream.ReadInt32(GRAPHICS_ACTIVITY_PTR) == 1)
 			{
+				float testFOV = (float)((stream.ReadSingle(0x003A7BB8) / Math.PI) * 180.0);
+
+				if (testFOV > 0 && testFOV < 360)
+					Program.glForm.glControl1.FieldOfView = testFOV;
+
+
 				if (map == null)
 				{
 					int mapAddress = stream.ReadInt32(0x00348D88);
 					if (stream.ReadString(mapAddress, 3, false) == "BAR" && stream.ReadString(mapAddress + 0x14, 4, true) == "MAP")
 					{
 						map = MDLX.RAM_Model.LoadMAP(stream, mapAddress, mapName);
+						MDLX.RAM_Model.RememberFrustrum = new bool[0];
 					}
+					SmoothCam(1f);
 				}
 				else
 				{
-					glControl1.RenderLayers["map_glow"].Enabled = mapAlphaGlow.Checked;
 
-					SmoothCam(4f);
+					/* Updating MAP & Camera */
+
+					glControl1.RenderLayers["map_glow"].Enabled = mapAlphaGlow.Checked;
+					SmoothCam(2f);
+
+					/* Instance new models on map */
+					while (false&&stream.ReadInt32(PLAYER_ACTIVITY_PTR) > 0 && awaitingModelsMemRegions.Count > 0)
+					{
+						int memRegion = awaitingModelsMemRegions[0];
+						awaitingModelsMemRegions.RemoveAt(0);
+
+						if (stream.ReadInt32(memRegion + 0x148) != memRegion)
+							continue;
+
+						MDLX.RAM_Model newModel = new MDLX.RAM_Model(stream, memRegion);
+
+						if (newModel.Banned)
+						{
+							Console.WriteLine("New ban entry");
+						}
+						else
+						{
+							Console.WriteLine(newModel.ObjentryModelName);
+							models.Add(newModel);
+							modelsMemRegions.Add(memRegion);
+						}
+					}
+
+					/* Updating Models */
+
+					for (int i = 0; i < models.Count; i++)
+					{
+						RAM_Model.UpdateModel(models[i], mapDiffuseRegions.Checked);
+					}
 				}
 			}
 			else
 			{
 				map = null;
+				MDLX.RAM_Model.RememberFrustrum = new bool[0];
+				models.Clear();
+				modelsMemRegions.Clear();
+				awaitingModelsMemRegions.Clear();
 			}
 
 
 			if (stp.ElapsedMilliseconds > lastSecond + 1000)
 			{
-				float divide = 1f;
-				
-				this.Text = ((totalTicks - lastTick) / (divide * 3f)) +"FPS";
+				this.Text = ((totalTicks - lastTick) / 5f) +"FPS";
 				lastTick = totalTicks;
 				lastSecond = stp.ElapsedMilliseconds;
 			}
 		}
 
+		public Frustrum frustrum1 = new Frustrum();
 		private unsafe void bigViewport_RenderFrame(object sender, EventArgs e)
 		{
 			Matrix4 lookat = Matrix4.LookAt(cameraPosition, cameraLookAt, Vector3.UnitY);
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref lookat);
 
-			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked ? Mesh.Shader.FogMode.XYZ : Shader.FogMode.None, frustumCulling.Checked);
+			frustrum1.CalculateFrustum();
+
+			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, frustrum1);
+			for (int i=0;i< models.Count;i++)
+			{
+				RAM_Model.DrawModel(models[i], sender as GLControl);
+			}
 			totalTicks++;
 		}
 
 
+		public Frustrum frustrum2 = new Frustrum();
 		private void smallViewport_RenderFrame(object sender, EventArgs e)
 		{
-			Matrix4 lookat = Matrix4.LookAt(cameraLookAt + new Vector3(500, 500, 500), cameraLookAt, Vector3.UnitY);
+			Matrix4 lookat = Matrix4.LookAt(cameraLookAt, cameraPosition, Vector3.UnitY);
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref lookat);
 
-			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked ? Mesh.Shader.FogMode.XYZ : Shader.FogMode.None, frustumCulling.Checked);
+			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, null);
 		}
 
+		public Frustrum frustrum3 = new Frustrum();
 		private void smallViewport_RenderFrame2(object sender, EventArgs e)
 		{
 			Matrix4 lookat = Matrix4.LookAt(cameraLookAt + new Vector3(0, 50, 150), cameraLookAt, Vector3.UnitY);
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref lookat);
 
-			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked ? Mesh.Shader.FogMode.XYZ : Shader.FogMode.None, frustumCulling.Checked);
+			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, null);
 		}
 
 		public Vector3 cameraPosition = Vector3.Zero;
@@ -178,6 +232,7 @@ namespace BDxGraphiK
 
 			Vector3 camPosition = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
 			Vector3 camLookAt = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
+			
 
 			cameraPosition += (camPosition - cameraPosition) / step;
 			cameraLookAt += (camLookAt - cameraLookAt) / step;
@@ -191,11 +246,12 @@ namespace BDxGraphiK
 		{
 			stp.Start();
 			GL.Enable(EnableCap.DepthTest);
+			
+			GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+
 			GL.Enable(EnableCap.CullFace);
 			GL.Enable(EnableCap.Blend);
-			GL.Enable(EnableCap.ColorArray);
-			GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
 			GL.Enable(EnableCap.Multisample);
 
 			GLControl.ShaderPrograms = new List<int>(0);
@@ -223,13 +279,15 @@ namespace BDxGraphiK
 				GLControl.ShaderPrograms.Add(shader.Handle);
 			}
 
+			
 			GLControl.RenderLayer mapGlow = new GLControl.RenderLayer();
 			string sourceCcode = System.IO.File.ReadAllText("resources/MDLX/MAPGLOW_output_frag.c");
 			string[] textureSize = sourceCcode.Substring(sourceCcode.IndexOf("textureSize =")).Split(new char[] { '(', ')' })[1].Split(',');
 			mapGlow.Initialize(TextureMinFilter.Linear, TextureMinFilter.Linear, int.Parse(textureSize[0]), int.Parse(textureSize[1]), new Shader("resources/graphics/T1N0C1S0_vert.c", "resources/MDLX/MAPGLOW_input_frag.c"), new Shader("resources/graphics/T1N0C1S0_vert.c", "resources/MDLX/MAPGLOW_output_frag.c"));
 			glControl1.RenderLayers.Add("map_glow", mapGlow);
-
+			
 			multipleRenders_CheckedChanged(null, null);
+
 		}
 
 
@@ -266,7 +324,6 @@ namespace BDxGraphiK
 						if (awaitingModelsMemRegions.Contains(i) || modelsMemRegions.Contains(i))
 							continue;
 
-						Console.WriteLine("New model entry found at " + i.ToString("X8"));
 						awaitingModelsMemRegions.Add(i);
 					}
 				}

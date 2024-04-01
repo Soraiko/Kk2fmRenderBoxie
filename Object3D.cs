@@ -1,4 +1,5 @@
-﻿using Assimp;
+﻿//#define MESH_RENDER_MODE_RECURSIVE <-- doesn't work for many mesh models
+using Assimp;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using System;
@@ -27,7 +28,6 @@ namespace BDxGraphiK
 		public List<TextureMaterial> TextureMaterials = new List<TextureMaterial>(0);
 		public Skeleton Skeleton = new Skeleton();
 
-		public OpenTK.Vector4 ColorMultiplicator = new Vector4(1,1,1,1);
 
 		public new void GenerateBinary()
 		{
@@ -82,6 +82,8 @@ namespace BDxGraphiK
 			object3D.Variables = this.Variables;
 			object3D.StreamRW = this.StreamRW;
 			object3D.StreamRW.BaseStream.Position = 0;
+			object3D.QueryUniforms = this.QueryUniforms;
+			object3D.QueryUniformsArrays = this.QueryUniformsArrays;
 			object3D.BufferBinary();
 			return object3D;
 		}
@@ -502,8 +504,20 @@ namespace BDxGraphiK
 			return joint;
 		}
 
+		public Dictionary<string, int> QueryUniforms = new Dictionary<string, int>
+		{
+			["fog_mode"] = -1,
+			["colormultiplicator"] = -1
+		};
+
+		public List<object> QueryUniformsArrays = new List<object>
+		{
+			(int)Mesh.Shader.FogMode.None,
+			new Vector4(1f)
+		};
+
 		public Texture Shadow = Texture.whitePixel1x1;
-		public Texture Draw(bool shadow, Shader.FogMode fogMode)
+		public Texture Draw(bool shadow)
 		{
 			var output = Texture.whitePixel1x1;
 
@@ -516,7 +530,25 @@ namespace BDxGraphiK
 				GL.UniformBlockBinding(this.Meshes[0].shader.Handle, matrices_loc, 0);
 				GL.BindBufferBase(BufferRangeTarget.UniformBuffer, 0, this.Skeleton.UniformBufferObject);
 			}
-			this.Meshes[0].Draw(this, fogMode);
+
+			if (this.Meshes.Count >0)
+			{
+				int handle = this.Meshes[0].shader.Handle;
+
+				if (GLControl.AbsoluteShader > -1)
+					handle = GLControl.AbsoluteShader;
+
+				GL.UseProgram(handle);
+				Query(this.QueryUniforms, this.QueryUniformsArrays, handle);
+
+				for (int i = 0; i < this.Meshes.Count; i++)
+				{
+					this.Meshes[i].Draw(this, handle);
+#if MESH_RENDER_MODE_RECURSIVE
+					break;
+#endif
+				}
+			}
 
 			return output;
 		}

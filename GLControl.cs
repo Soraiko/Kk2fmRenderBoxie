@@ -65,6 +65,8 @@ namespace BDxGraphiK
 			Mesh.Shader inputShader;
 			Mesh.Shader outputShader;
 
+			const int BORDER_PIXELS = 10;
+
 
 			public void Initialize(
 				TextureMinFilter inputFilter,
@@ -74,8 +76,8 @@ namespace BDxGraphiK
 				Mesh.Shader inputShader,
 				Mesh.Shader outputShader)
 			{
-				this.framebufferWidth = renderWidth;
-				this.framebufferHeight = renderHeight;
+				this.framebufferWidth = renderWidth+ BORDER_PIXELS*2;
+				this.framebufferHeight = renderHeight + BORDER_PIXELS * 2;
 				this.inputShader = inputShader;
 				this.outputShader = outputShader;
 
@@ -127,7 +129,7 @@ namespace BDxGraphiK
 			public void BindBuffer()
 			{
 				GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
-				GL.Viewport(0, 0, framebufferWidth, framebufferHeight);
+				GL.Viewport(BORDER_PIXELS, BORDER_PIXELS, framebufferWidth-(BORDER_PIXELS*2), framebufferHeight- (BORDER_PIXELS * 2));
 				GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
 				AbsoluteShader = this.inputShader.Handle;
 			}
@@ -142,7 +144,7 @@ namespace BDxGraphiK
 			public void Draw()
 			{
 				AbsoluteShader = this.outputShader.Handle;
-				Matrix4 orhto = Matrix4.CreateOrthographic(1, 1, 0.1f, 10f);
+				Matrix4 orhto = Matrix4.CreateOrthographic(1- (BORDER_PIXELS*2) / (float)framebufferWidth, 1- (BORDER_PIXELS*2) / (float)framebufferHeight, 0.1f, 10f);
 
 				GL.MatrixMode(MatrixMode.Projection);
 				GL.LoadMatrix(ref orhto);
@@ -151,7 +153,7 @@ namespace BDxGraphiK
 				GL.MatrixMode(MatrixMode.Modelview);
 				GL.LoadMatrix(ref lookat);
 
-				layerModel.Draw(false, Mesh.Shader.FogMode.None);
+				layerModel.Draw(false);
 				AbsoluteShader = -1;
 			}
 		}
@@ -172,9 +174,8 @@ namespace BDxGraphiK
 		public static List<Dictionary<string, int>> UniformLocations = new List<Dictionary<string, int>>(0);
 
 		public static string AlphaTest_UniformName = "";
-
 		public static string FogColor_UniformName = "";
-		Color fogColor = Color.Transparent;
+		Color fogColor = Color.FromArgb(255, 128, 128, 128);
 		public Color FogColor
 		{
 			get
@@ -214,7 +215,7 @@ namespace BDxGraphiK
 		}
 
 		public static string FogInfo_UniformName = "";
-		float fogNear = 0f;
+		float fogNear = Single.NaN;
 		public float FogNear
 		{
 			get
@@ -227,7 +228,7 @@ namespace BDxGraphiK
 			}
 		}
 
-		float fogFar = 100f;
+		float fogFar = 1000f;
 		public float FogFar
 		{
 			get

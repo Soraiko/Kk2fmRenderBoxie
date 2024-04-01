@@ -17,6 +17,7 @@ using static System.Net.Mime.MediaTypeNames;
 using System.Drawing.Drawing2D;
 using System.Windows.Media;
 using System.Linq;
+using static SrkAlternatives.Mdlx;
 
 namespace SrkAlternatives
 {
@@ -41,11 +42,12 @@ namespace SrkAlternatives
 		{
 			if (Path.GetExtension(filename) == ".dae")
 				filename = filename.Remove(filename.Length - 4, 4);
+
 			for (int h = 0; h < this.models.Count; h++)
 			{
 				XmlDocument output = new XmlDocument();
 				output.PreserveWhitespace = false;
-				output.Load(@"resources\sample.dae");
+				output.Load(@"resources\sample_4_mdlx.dae");
 				XmlNode image = output.SelectSingleNode("COLLADA/library_images/image"); image.ParentNode.RemoveChild(image);
 
 				XmlNode effect = output.SelectSingleNode("//effect"); effect.ParentNode.RemoveChild(effect);
@@ -56,14 +58,12 @@ namespace SrkAlternatives
 				XmlNode controller = output.SelectSingleNode("COLLADA/library_controllers/controller"); controller.ParentNode.RemoveChild(controller);
 				XmlNode polySurface_controller = output.SelectSingleNode("//visual_scene/node[instance_controller]"); polySurface_controller.ParentNode.RemoveChild(polySurface_controller);
 				XmlNode polySurface_geometry = output.SelectSingleNode("//visual_scene/node[instance_geometry]"); polySurface_geometry.ParentNode.RemoveChild(polySurface_geometry);
+				
 
 				XmlNode scene = output.SelectSingleNode("//visual_scene");
 				XmlNode instance_scene = output.SelectSingleNode("//scene/instance_visual_scene"); instance_scene.ParentNode.RemoveChild(instance_scene);
 
 				XmlNode joint = output.SelectSingleNode("//node[@name='joint0']");
-				scene.RemoveChild(scene.ChildNodes[0]);
-				scene.RemoveChild(scene.ChildNodes[0]);
-				scene.RemoveChild(scene.ChildNodes[0]);
 				scene.ParentNode.RemoveChild(scene);
 				int total_image_files = 0;
 
@@ -148,6 +148,7 @@ namespace SrkAlternatives
 					string polySurfaceName = this.models[h].Name+"_";
 					bool shadow = j > this.models[h].Meshes.Count - 1;
 					Mesh mesh = shadow ? this.models[h].ShadowMeshes[j- this.models[h].Meshes.Count] : this.models[h].Meshes[j];
+					
 					if (shadow)
 					{
 						polySurfaceName += "shadow_";
@@ -219,7 +220,7 @@ namespace SrkAlternatives
 						array_node.InnerText = "\n";
 						for (int k = 0; k < mesh.textureCoordinates.Count; k++)
 						{
-							array_node.InnerText += mesh.textureCoordinates[k].X + " " + mesh.textureCoordinates[k].Y + "\n";
+							array_node.InnerText += mesh.textureCoordinates[k].X + " " + -mesh.textureCoordinates[k].Y + "\n";
 						}
 					}
 					else
@@ -566,10 +567,8 @@ namespace SrkAlternatives
 							(OpenTK.Graphics.OpenGL.TextureWrapMode)(int)addressMode.AddressV
 							});
 
-							if (this.models.Count == 0)
-							{
-								output.Save(@"C:\Users\Daniel\source\repos\BDxGraphiK\bin\Debug\content\map\jp\t"+ this.models.Count+"-" + w + ".png");
-							}
+							//output.Save(@"C:\Users\Daniel\source\repos\BDxGraphiK\bin\Debug\content\map\jp\t"+ this.models.Count+"-" + w + ".png");
+							
 						}
 
 					}
@@ -676,46 +675,48 @@ namespace SrkAlternatives
 
 					if (model_type == 3)
 					{
-						this.Skeleton = new Skeleton();
-						int bonesOffset = s + this.Int16(s + 0x14);
-						List<int> parentIndices = new List<int>(0);
-
-						for (int i = 0; i < bonesCount; i++)
+						if (bonesCount>0)
 						{
-							int pos = bonesOffset + i * 0x40;
+							this.Skeleton = new Skeleton();
+							int bonesOffset = s + this.Int16(s + 0x14);
+							List<int> parentIndices = new List<int>(0);
 
-							int index = this.Int16(pos + 0x00);
-							int parent_index = this.Int16(pos + 0x04);
-
-							Joint bone = new Joint("bone" + i.ToString("d3"));
-							bone.IndexInBuffer = index;
-							parentIndices.Add(parent_index);
-							bone.Scale.X = this.Single(pos + 0x10);
-							bone.Scale.Y = this.Single(pos + 0x14);
-							bone.Scale.Z = this.Single(pos + 0x18);
-
-							bone.Rotate.X = this.Single(pos + 0x20);
-							bone.Rotate.Y = this.Single(pos + 0x24);
-							bone.Rotate.Z = this.Single(pos + 0x28);
-							bone.Rotate.W = this.Single(pos + 0x1C);
-
-							bone.Translate.X = this.Single(pos + 0x30);
-							bone.Translate.Y = this.Single(pos + 0x34);
-							bone.Translate.Z = this.Single(pos + 0x38);
-							bone.CalculateMatrixFromAngles();
-
-							this.Skeleton.Joints.Add(bone);
-						}
-						for (int i = 0; i < bonesCount; i++)
-						{
-							if (parentIndices[i] > -1)
+							for (int i = 0; i < bonesCount; i++)
 							{
-								this.Skeleton.Joints[parentIndices[i]].Children.Add(this.Skeleton.Joints[i]);
-								this.Skeleton.Joints[i].Parent = this.Skeleton.Joints[parentIndices[i]];
-							}
-						}
-						this.Skeleton.JointsTree.Add(this.Skeleton.Joints[0]);
+								int pos = bonesOffset + i * 0x40;
 
+								int index = this.Int16(pos + 0x00);
+								int parent_index = this.Int16(pos + 0x04);
+
+								Joint bone = new Joint("bone" + i.ToString("d3"));
+								bone.IndexInBuffer = index;
+								parentIndices.Add(parent_index);
+								bone.Scale.X = this.Single(pos + 0x10);
+								bone.Scale.Y = this.Single(pos + 0x14);
+								bone.Scale.Z = this.Single(pos + 0x18);
+
+								bone.Rotate.X = this.Single(pos + 0x20);
+								bone.Rotate.Y = this.Single(pos + 0x24);
+								bone.Rotate.Z = this.Single(pos + 0x28);
+								bone.Rotate.W = this.Single(pos + 0x1C);
+
+								bone.Translate.X = this.Single(pos + 0x30);
+								bone.Translate.Y = this.Single(pos + 0x34);
+								bone.Translate.Z = this.Single(pos + 0x38);
+								bone.CalculateMatrixFromAngles();
+
+								this.Skeleton.Joints.Add(bone);
+							}
+							for (int i = 0; i < bonesCount; i++)
+							{
+								if (parentIndices[i] > -1)
+								{
+									this.Skeleton.Joints[parentIndices[i]].Children.Add(this.Skeleton.Joints[i]);
+									this.Skeleton.Joints[i].Parent = this.Skeleton.Joints[parentIndices[i]];
+								}
+							}
+							this.Skeleton.JointsTree.Add(this.Skeleton.Joints[0]);
+						}
 						int ikOffset = s + this.Int16(s + 0x18);
 						//this.ikData = new byte[bonesOffset - ikOffset];
 						//Array.Copy(this.Data, ikOffset, this.ikData, 0, this.ikData.Length);

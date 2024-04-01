@@ -13,6 +13,7 @@ layout (location = 15) in uint inf6;
 out vec3 f_position;
 out vec2 f_texcoord;
 out float f_alphatest;
+out float f_skinned;
 
 layout(std140) uniform transform_data
 {
@@ -93,4 +94,5 @@ void main()
 	f_position = influenced_position.xyz;
 	f_texcoord = v_texcoord;
 	f_alphatest = alphatest;
+	f_skinned = 1.0;
 }

@@ -11,19 +11,21 @@ void main()
 {
 	vec4 color = texture(texture0, f_texcoord);
 	
-	if (glow_mesh == 0)
+	if (glow_mesh == 0 || color.w < 0.999)
+		discard;
+	
+	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
+	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
+	
+	if (distance(eyePosition, f_position) > 10000 || distance(f_color.xyz, vec3(1,1,1)) > 0.01)
 	{
 		color = vec4(0,0,0,1);
 	}
 	else
 	{
-		if (color.w < 0.999)
-			color = vec4(0,0,0,1);
-		else
-		{
-			color *= color.w;
-			color.w = 0.5;
-		}
+		color *= color.w;
+		//color = f_color * color;
+		color.w = 0.5;
 	}
 	
 	gl_FragColor = color;

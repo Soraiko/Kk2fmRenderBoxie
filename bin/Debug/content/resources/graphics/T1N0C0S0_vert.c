@@ -5,6 +5,7 @@ layout (location = 1) in vec2 v_texcoord;
 out vec3 f_position;
 out vec2 f_texcoord;
 out float f_alphatest;
+out float f_skinned;
 uniform float alphatest;
 
 void main()
@@ -13,4 +14,5 @@ void main()
 	f_position = v_position;
 	f_texcoord = v_texcoord;
 	f_alphatest = alphatest;
+	f_skinned = 0.0;
 }

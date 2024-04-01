@@ -7,6 +7,7 @@ out vec3 f_position;
 out vec2 f_texcoord;
 out vec4 f_color;
 out float f_alphatest;
+out float f_skinned;
 
 uniform float alphatest;
 
@@ -17,4 +18,5 @@ void main()
 	f_texcoord = v_texcoord;
 	f_color = v_color;
 	f_alphatest = alphatest;
+	f_skinned = 0.0;
 }

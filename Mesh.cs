@@ -1,4 +1,6 @@
-﻿using Assimp;
+﻿//#define MESH_RENDER_MODE_RECURSIVE <-- doesn't work for many mesh models
+
+using Assimp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static BDxGraphiK.Mesh;
+using System.Collections;
 
 namespace BDxGraphiK
 {
@@ -91,37 +94,10 @@ namespace BDxGraphiK
 				GL.DeleteShader(VertexShader);
 			}
 
-			int colormultiplicator = -1;
 			int bump_mapping = -1;
-			int fog_mode = -1;
 
-
-
-
-			public void Use(Vector4 colorMultiplicator, TextureMaterial material, Shader.FogMode fogMode)
+			public void Use(TextureMaterial material, int handle)
 			{
-				int handle = this.Handle;
-
-				if (GLControl.AbsoluteShader > -1)
-					handle = GLControl.AbsoluteShader;
-
-				GL.UseProgram(handle);
-
-				if (handle == this.Handle)
-				{
-					if (colormultiplicator < 0)
-						colormultiplicator = GL.GetUniformLocation(handle, "colormultiplicator");
-
-					if (colormultiplicator > -1)
-						GL.Uniform4(colormultiplicator, colorMultiplicator);
-
-				}
-
-					fog_mode = GL.GetUniformLocation(handle, "fog_mode");
-				if (fog_mode > -1)
-					GL.Uniform1(fog_mode, (int)fogMode);
-
-
 				var texture = material.Textures[(int)TextureMaterial.TextureType.Diffuse];
 				var textureInteger = texture.Integer;
 
@@ -143,19 +119,17 @@ namespace BDxGraphiK
 					texture = material.Textures[(int)TextureMaterial.TextureType.BumpMapping];
 					textureInteger = texture.Integer;
 
-					if (textureInteger == 0)
+					if (textureInteger > 0)
 					{
-						texture = Texture.bumpPixel1x1;
-						textureInteger = Texture.bumpPixel1x1.Integer;
+						GL.ActiveTexture(TextureUnit.Texture1);
+						GL.BindTexture(TextureTarget.Texture2D, textureInteger);
+
+						if (bump_mapping < 0)
+							bump_mapping = GL.GetUniformLocation(handle, "bump_mapping");
+						if (bump_mapping > -1)
+							GL.Uniform1(bump_mapping, 1);
 					}
 
-					GL.ActiveTexture(TextureUnit.Texture1);
-					GL.BindTexture(TextureTarget.Texture2D, textureInteger);
-
-					if (bump_mapping < 0)
-						bump_mapping = GL.GetUniformLocation(handle, "bump_mapping");
-					if (bump_mapping > -1)
-						GL.Uniform1(bump_mapping, 1);
 				}
 			}
 
@@ -237,6 +211,8 @@ namespace BDxGraphiK
 				0b00000000000000000000000000010000
 		}
 
+		public Vector4 Sphere;
+
 		public new void GenerateBinary()
 		{
 			int flag = (int)Mesh3DComponentBits.PositionsOnly;
@@ -271,11 +247,32 @@ namespace BDxGraphiK
 			this.StreamRW.BinaryWriter.Write((int)this.PrimitiveType);
 
 			this.StreamRW.BinaryWriter.Write(this.Positions.Count);
+
+			List<Vector3d> vector3Ds = new List<Vector3d>(0);
+
+			Vector3d middle = new Vector3d(0,0,0);
+
 			for (int i = 0; i < this.Positions.Count; i++)
 			{
+				Vector3d currV3d =  new Vector3d(this.Positions[i].X, this.Positions[i].Y, this.Positions[i].Z);
+				middle += currV3d;
+				vector3Ds.Add(currV3d);
+			}
+			middle /= (double)this.Positions.Count;
+
+			double radius = double.MinValue;
+
+			for (int i = 0; i < this.Positions.Count; i++)
+			{
+				double dist = Vector3d.Distance(middle, vector3Ds[i]);
+				if (dist > radius)
+				{
+					radius = dist;
+				}
 				this.StreamRW.BinaryWriter.Write(this.Positions[i].X);
 				this.StreamRW.BinaryWriter.Write(this.Positions[i].Y);
 				this.StreamRW.BinaryWriter.Write(this.Positions[i].Z);
+				
 				if ((flag & (int)Mesh3DComponentBits.TextureCoords) > 0)
 				{
 					this.StreamRW.BinaryWriter.Write(this.TextureCoords[i].X);
@@ -312,6 +309,7 @@ namespace BDxGraphiK
 					}
 				}
 			}
+			this.Sphere = new Vector4((float)middle.X, (float)middle.Y, (float)middle.Z, (float)radius);
 
 			if ((flag & (int)Mesh3DComponentBits.Indices) > 0)
 			{
@@ -448,36 +446,41 @@ namespace BDxGraphiK
 		public bool SkipRender;
 		public Mesh Next;
 
+		public static void Query(Dictionary<string, int> QueryUniforms, List<object> QueryUniformsArrays, int handle)
+		{
+			for (int i = 0; i < QueryUniforms.Count; i++)
+			{
+				var el = QueryUniforms.ElementAt(i);
+				int val = el.Value;
+				if (val < 0)
+					QueryUniforms[el.Key] = GL.GetUniformLocation(handle, el.Key);
+				if (val > -1)
+				{
+					if (QueryUniformsArrays[i] is bool)
+						GL.Uniform1(val, ((bool)QueryUniformsArrays[i]) ? 1 : 0);
+					else if (QueryUniformsArrays[i] is int)
+						GL.Uniform1(val, (int)QueryUniformsArrays[i]);
+					else if (QueryUniformsArrays[i] is Vector4)
+						GL.Uniform4(val, (Vector4)QueryUniformsArrays[i]);
+				}
+
+			}
+		}
+
 		public Dictionary<string, int> QueryUniforms = new Dictionary<string, int>(0);
 		public List<object> QueryUniformsArrays = new List<object>(0);
 
-		public void Draw(Object3D object3D, Shader.FogMode fogMode)
+		public void Draw(Object3D object3D, int handle)
 		{
 			if (this.shader == null)
 				return;
 
 			if (this.SkipRender == false)
 			{
-				this.shader.Use(object3D.ColorMultiplicator, object3D.TextureMaterials[this.MaterialIndex], fogMode);
+				this.shader.Use(object3D.TextureMaterials[this.MaterialIndex], handle);
 
-				int handle = this.shader.Handle;
+				Query(this.QueryUniforms, this.QueryUniformsArrays, handle);
 
-				if (GLControl.AbsoluteShader > -1)
-					handle = GLControl.AbsoluteShader;
-
-				for (int i = 0; i < QueryUniforms.Count; i++)
-				{
-					if (QueryUniforms.ElementAt(i).Value < 0)
-						QueryUniforms[QueryUniforms.ElementAt(i).Key] = GL.GetUniformLocation(handle, QueryUniforms.ElementAt(i).Key);
-					if (QueryUniforms.ElementAt(i).Value > -1)
-					{
-						if (QueryUniformsArrays[i] is bool)
-							GL.Uniform1(QueryUniforms.ElementAt(i).Value, ((bool)QueryUniformsArrays[i]) ? 1 : 0);
-						else if (QueryUniformsArrays[i] is int)
-							GL.Uniform1(QueryUniforms.ElementAt(i).Value, (int)QueryUniformsArrays[i]);
-					}
-
-				}
 
 				GL.BindVertexArray(VertexArrayObject);
 				if (IndexBufferObject > 0)
@@ -488,9 +491,12 @@ namespace BDxGraphiK
 				else
 					GL.DrawArrays(this.PrimitiveType, 0, PrimitiveCount);
 			}
-
+#if MESH_RENDER_MODE_RECURSIVE
 			if (this.Next != null)
+			{
 				this.Next.Draw(object3D, fogMode);
+			}
+#endif
 		}
 	}
 }

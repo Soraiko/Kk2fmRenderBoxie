@@ -63,7 +63,7 @@ void main()
 	for (int x = -kernelSize; x <= kernelSize; ++x) {
 		for (int y = -kernelSize; y <= kernelSize; ++y) {
 			vec2 offset = vec2(x, y);
-			float weight = exp(-(dot(offset, offset)) / (2.0 * sigma * sigma));
+			float weight = exp(-(dot(offset, offset)) / (sigma * sigma));
 			blur += texture(texture0, f_texcoord + offset / textureSize).rgb * weight;
 			totalWeight += weight;
 		}

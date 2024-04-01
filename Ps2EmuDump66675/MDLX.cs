@@ -15,6 +15,8 @@ using static SrkAlternatives.Mdlx;
 using Assimp;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
+using System.Security.Policy;
+using System.Windows.Forms;
 
 namespace BDxGraphiK
 {
@@ -34,6 +36,7 @@ namespace BDxGraphiK
 		{
 			FileStream fs = new FileStream(filename, FileMode.Open);
 			this.mdlx = new SrkAlternatives.Mdlx(fs);
+			this.mdlx.ExportDAE(@"D:\Users\Daniel\Desktop\daes\model.dae");
 
 			for (int i = 0; i< mdlx.models.Count; i++)
 			{
@@ -67,9 +70,10 @@ namespace BDxGraphiK
 				for (int j=0;j< mdlx.models[i].Meshes.Count + mdlx.models[i].ShadowMeshes.Count; j++)
 				{
 					Mdlx.Mesh alternativeMesh = null;
-					
-					if (j >= mdlx.models[i].Meshes.Count)
-						alternativeMesh = mdlx.models[i].ShadowMeshes[j];
+					bool shadow = j >= mdlx.models[i].Meshes.Count;
+
+					if (shadow)
+						alternativeMesh = mdlx.models[i].ShadowMeshes[j- mdlx.models[i].Meshes.Count];
 					else
 						alternativeMesh = mdlx.models[i].Meshes[j];
 
@@ -125,13 +129,15 @@ namespace BDxGraphiK
 					List<OpenTK.Vector2> texCoords_triBuffer = new List<OpenTK.Vector2>(0);
 					List<System.Drawing.Color> colors_triBuffer = new List<System.Drawing.Color>(0);
 					bool hasColor = alternativeMesh.colors.Count > 1;
+					bool hasTextcoord = alternativeMesh.textureCoordinates.Count > 1;
 					List<ushort> inputIndices = new List<ushort>(0);
 
 					for (int k=0;k<alternativeMesh.triangleFlags.Count;k++)
 					{
 						System.Drawing.Color col = hasColor ? alternativeMesh.colors[k] : System.Drawing.Color.White;
+						Vector2 texCoord = hasTextcoord ? alternativeMesh.textureCoordinates[k] : Vector2.Zero;
 						tri.Add(alternativeMesh.vertexIndices[k]);
-						texCoords_triBuffer.Add(alternativeMesh.textureCoordinates[k]);
+						texCoords_triBuffer.Add(texCoord);
 						colors_triBuffer.Add(col);
 
 						if (tri.Count > 3)
@@ -274,18 +280,28 @@ namespace BDxGraphiK
 					else
 						currentModel.AddMesh(mesh);
 
-					if (true)
+					/*if (true)
 					{
 						mesh.QueryUniforms.Add("glow_mesh", -1);
 						mesh.QueryUniformsArrays.Add(mdlx.models[i].DoubleOpacities[mesh.MaterialIndex]);
-					}
+					}*/
 				}
 				if (this.Models.ContainsKey(mdlx.models[i].Name) == false)
 					this.Models[mdlx.models[i].Name] = new List<Object3D>(0);
 
 				this.Models[mdlx.models[i].Name].Add(currentModel);
 
-
+				for (int qu = 0; qu < currentModel.QueryUniforms.Count; qu++)
+				{
+					var keypair = currentModel.QueryUniforms.ElementAt(qu);
+					if (keypair.Key == "fog_mode")
+					{
+						currentModel.QueryUniformsArrays[qu] = mdlx.models[i].Name == "SK0" ?
+							(int)Mesh.Shader.FogMode.None : (int)Mesh.Shader.FogMode.XYZ;
+					}
+				}
+				currentModel.QueryUniforms.Add("glow_mesh", -1);
+				currentModel.QueryUniformsArrays.Add(mdlx.models[i].Name == "MAP");
 
 				currentModel.GenerateBinary();
 				currentModel.BufferBinary();
@@ -332,9 +348,9 @@ namespace BDxGraphiK
 
 
 
-		public static void DrawMap(MDLX map, GLControl sender, Mesh.Shader.FogMode fogMode)
+		public static void DrawMap(MDLX map, bool fogEnabled, GLControl sender)
 		{
-			if (map.Variables.ContainsKey("BackColor"))
+			if (fogEnabled && map.Variables.ContainsKey("BackColor"))
 			{
 				sender.BackColor = (Color)map.Variables["BackColor"];
 				sender.FogColor = (Color)map.Variables["FogColor"];
@@ -347,36 +363,32 @@ namespace BDxGraphiK
 			{
 				sender.BackColor = Color.Black;
 				sender.FogColor = Color.Transparent;
-				sender.FogNear = 0f;
+				sender.FogNear = Single.NaN;
 				sender.FogFar = 100f;
 				sender.FogMin = 0f;
 				sender.FogMax = 100f;
-
-				/*sender.BackColor = Color.Black;
-				sender.FogColor = Color.Red;
-				sender.FogNear = 1000f;
-				sender.FogFar = 1200f;
-				sender.FogMin = 0f;
-				sender.FogMax = 255f;*/
 			}
 
-			if (map.Models.ContainsKey("SK1"))
-			{
-				var sk1s = map.Models["SK1"];
-				foreach (Object3D obj in sk1s)
-					obj.Draw(false, fogMode);
-			}
+			
 			if (map.Models.ContainsKey("SK0"))
 			{
 				var sk0s = map.Models["SK0"];
 				foreach (Object3D obj in sk0s)
-					obj.Draw(false, Mesh.Shader.FogMode.None);
+					obj.Draw(false);
 			}
+			
+			if (map.Models.ContainsKey("SK1"))
+			{
+				var sk1s = map.Models["SK1"];
+				foreach (Object3D obj in sk1s)
+					obj.Draw(false);
+			}
+
 			if (map.Models.ContainsKey("MAP"))
 			{
 				var maps = map.Models["MAP"];
 				foreach (Object3D obj in maps)
-					obj.Draw(false, fogMode);
+					obj.Draw(false);
 			}
 		}
 
@@ -620,59 +632,106 @@ namespace BDxGraphiK
 
 			static long mapRenderTick = 0;
 
-			public static void DrawMap(RAM_Model mapRamModel, GLControl sender, Mesh.Shader.FogMode fogMode, bool frustrumCulling)
+			public static bool[] RememberFrustrum = new bool[0];
+
+			public static void UpdateModel(RAM_Model modelRamModel, bool mapColorRegions)
+			{
+				for (int i = 0; i < modelRamModel.Model.Models.Count; i++)
+				{
+					List<Object3D> models = modelRamModel.Model.Models.ElementAt(i).Value;
+					foreach (Object3D model in models)
+					{
+						for (int qu = 0; qu < model.QueryUniforms.Count; qu++)
+						{
+							var keypair = model.QueryUniforms.ElementAt(qu);
+							if (keypair.Key == "colormultiplicator")
+							{
+								model.QueryUniformsArrays[qu] = mapColorRegions ? modelRamModel.ColorMultiplicator : Vector4.One;
+							}
+						}
+
+					}
+				}
+			}
+
+			public static void DrawModel(RAM_Model modelRamModel, GLControl sender)
+			{
+				for (int i=0;i< modelRamModel.Model.Models.Count;i++)
+				{
+					List<Object3D> models = modelRamModel.Model.Models.ElementAt(i).Value;
+					foreach (Object3D model in models)
+					{
+						model.Draw(false);
+					}
+				}
+			}
+
+			public static void DrawMap(RAM_Model mapRamModel, GLControl sender, bool fogEnabled, CheckState frustrumCullingEnabled, Frustrum frustrum)
 			{
 				if (mapRamModel !=null)
 				{
 					long currTick = Program.glForm.totalTicks;
 					if (currTick != mapRenderTick)
 					{
-						float testFOV = (float)((mapRamModel.ProcessStream.ReadSingle(0x003A7BB8) / Math.PI) * 180.0);
+						if (frustrum != null)
+						{
+							for (int m=0;m< mapRamModel.Model.Models.Count;m++)
+							{
+								var currModel = mapRamModel.Model.Models.ElementAt(m).Value;
+								List<Mesh> meshes = currModel[0].Meshes;
 
-						if (testFOV > 0 && testFOV < 360)
-							Program.glForm.glControl1.FieldOfView = testFOV;
+								bool[] frustrums = new bool[meshes.Count];
+								if (frustrumCullingEnabled != CheckState.Unchecked)
+								{
+									if (RememberFrustrum.Length == 0)
+										RememberFrustrum = new bool[meshes.Count];
 
+									if (mapRamModel.Model.Models.ElementAt(m).Key == "MAP")
+									{
+										int mapDetailsPtr = mapRamModel.ProcessStream.ReadInt32(0x01D9EAAC);
+										if (mapRamModel.ProcessStream.ReadUInt32(mapDetailsPtr + 0x25587) == 0x80808080)
+										{
+											byte[] meshBytes = Program.glForm.stream.Read(mapDetailsPtr + 0x25700, meshes.Count);
+
+											for (int i = 0; i < meshBytes.Length; i++)
+											{
+												if (meshBytes[i] > 0)
+												{
+													RememberFrustrum[i] = true;
+												}
+											}
+										}
+										for (int i = 0; i < meshes.Count; i++)
+										{
+											if (frustrumCullingEnabled == CheckState.Indeterminate)
+												frustrums[i] =  RememberFrustrum[i] == false;
+											else
+												frustrums[i] =  RememberFrustrum[i] == false || frustrum.SphereInFrustum(meshes[i].Sphere) == false;
+										}
+									}
+									else
+									{
+										for (int i = 0; i < meshes.Count; i++)
+										{
+											if (frustrumCullingEnabled == CheckState.Indeterminate)
+												frustrums[i] = false;
+											else
+												frustrums[i] = frustrum.SphereInFrustum(meshes[i].Sphere) == false;
+										}
+									}
+								}
+								for (int i = 0; i < meshes.Count; i++)
+								{
+									meshes[i].SkipRender = frustrumCullingEnabled != CheckState.Unchecked && frustrums[i];
+								}
+							}
+						}
 						if (mapRamModel.Model.Models.ContainsKey("MAP"))
 						{
-							var map = mapRamModel.Model.Models["MAP"];
-							List<Mesh> meshes = map[0].Meshes;
-
-							int mapDetailsPtr = mapRamModel.ProcessStream.ReadInt32(0x01D9EAAC);
-							if (mapRamModel.ProcessStream.ReadUInt32(mapDetailsPtr + 0x25587) == 0x80808080)
-							{
-								byte[] meshBytes = Program.glForm.stream.Read(mapDetailsPtr + 0x25700, meshes.Count);
-								byte[] bytes = meshBytes;
-								List<byte[]> frustrum_bytes = (List<byte[]>)mapRamModel.Model.Variables["frustrum_bytes"];
-								List<int> frustrum_counts = (List<int>)mapRamModel.Model.Variables["frustrum_counts"];
-
-								string currentPrint = System.BitConverter.ToString(Program.md5.ComputeHash(meshBytes), 0);
-
-								int count = 0;
-								for (int i = 0; i < meshBytes.Length; i++) if (meshBytes[i] > 0) count++;
-								
-								frustrum_bytes.Add(meshBytes);
-								frustrum_counts.Add(count);
-
-								if (frustrum_counts.Count > 2)
-								{
-									frustrum_bytes.RemoveAt(0);
-									frustrum_counts.RemoveAt(0);
-								}
-								int pos = 0;
-								for (int i = 0; i < frustrum_counts.Count; i++)
-									if (frustrum_counts[i] > frustrum_counts[pos])
-										pos = i;
-								bytes = frustrum_bytes[pos];
-								bool ok = true;
-								for (int i = 0; frustrumCulling && i < bytes.Length; i++)
-									if (bytes[i] > 2) {ok = false; break; }
-								for (int i = 0; ok && i < bytes.Length; i++)
-									meshes[i].SkipRender = frustrumCulling && bytes[i] == 0;
-							}
 						}
 						mapRenderTick = currTick;
 					}
-					MDLX.DrawMap(mapRamModel.Model, sender, fogMode);
+					MDLX.DrawMap(mapRamModel.Model, fogEnabled, sender);
 				}
 			}
 
@@ -687,7 +746,7 @@ namespace BDxGraphiK
 				if (Directory.Exists("map\\jp") == false)
 					Directory.CreateDirectory("map\\jp");
 
-				if (true||File.Exists(filename) == false)
+				if (File.Exists(filename) == false)
 				{
 					OpenKh.ProcessStream modelDumpProcessStream = new OpenKh.ProcessStream(processStream.BaseProcess);
 					modelDumpProcessStream.BaseOffset = processStream.BaseOffset;
@@ -731,29 +790,36 @@ namespace BDxGraphiK
 				}
 			}
 
+			public bool Banned;
+
 			public RAM_Model(SrkProcessStream processStream, int memoryRegionAddress)
 			{
+				this.Banned = false;
+				int ramReadObjentryAddress = processStream.ReadInt32(memoryRegionAddress + 8);
 
 				this.ProcessStream = processStream;
 				this.MemoryRegionAddress = memoryRegionAddress;
 
 
 				this.MDLXAddress = processStream.ReadInt32(memoryRegionAddress + 0x7AC);
+				/*if (processStream.ReadString(this.MDLXAddress, 3, false) != "BAR")
+				{
+					this.Banned = true;
+					AddToBans(ramReadObjentryAddress);
+					return;
+				}*/
 				this.MSETAddress = processStream.ReadInt32(memoryRegionAddress + 0x140);
 
-				if (processStream.ReadString(this.MDLXAddress, 3, false) != "BAR")
-					return;
 
 				/*if (processStream.ReadString(this.MSETAddress, 3, false) != "BAR")
 					return;*/
 
-					if (Directory.Exists("obj") == false)
+				if (Directory.Exists("obj") == false)
 					Directory.CreateDirectory("obj");
 
 				string objentryModelName = "";
 				string objentryMsetName = "";
 
-				int ramReadObjentryAddress = processStream.ReadInt32(memoryRegionAddress + 8);
 				objentryModelName = "obj/" + processStream.ReadString(ramReadObjentryAddress + 8, 0x20, true) + ".mdlx";
 				this.ObjentryModelName = objentryModelName;
 
@@ -765,23 +831,31 @@ namespace BDxGraphiK
 					OpenKh.ProcessStream modelDumpProcessStream = new OpenKh.ProcessStream(processStream.BaseProcess);
 					modelDumpProcessStream.BaseOffset = processStream.BaseOffset;
 					modelDumpProcessStream.Position = this.MDLXAddress;
-
-					SrkAlternatives.Mdlx mdlx = new SrkAlternatives.Mdlx(modelDumpProcessStream);
-					mdlx.Save(objentryModelName);
+					try
+					{
+						SrkAlternatives.Mdlx mdlx = new SrkAlternatives.Mdlx(modelDumpProcessStream);
+						mdlx.Save(objentryModelName);
+					}
+					catch
+					{
+						this.Banned = true;
+						AddToBans(ramReadObjentryAddress);
+						return;
+					}
 				}
 
 				if (ramModelsHistory.ContainsKey(objentryModelName))
 				{
 					var mdlxToClone = ramModelsHistory[objentryModelName].Model;
 					this.Model = new MDLX();
-					for (int i=0;i< mdlxToClone.Models.Count;i++)
+					for (int i = 0; i < mdlxToClone.Models.Count; i++)
 					{
 						var keyPair = mdlxToClone.Models.ElementAt(i);
 						List<Object3D> liste = keyPair.Value;
 						List<Object3D> objects = new List<Object3D>(0);
 						for (int j = 0; j < liste.Count; j++)
 							objects.Add(liste[j].Clone());
-						
+
 						this.Model.Models.Add(keyPair.Key, objects);
 					}
 				}
@@ -789,6 +863,7 @@ namespace BDxGraphiK
 				{
 					this.Model = new MDLX(objentryModelName);
 				}
+
 
 				//this.Model.Variables Ajouter variables 
 
@@ -798,16 +873,13 @@ namespace BDxGraphiK
 					this.Model.Models.ElementAt(0).Value[0].Skeleton == null ||
 					this.Model.Models.ElementAt(0).Value[0].Skeleton.Joints.Count == 0)
 				{
-					if (ram_ban_log.Contains(ramReadObjentryAddress.ToString("X8")) == false)
-					{
-						ram_ban_log.Add(ramReadObjentryAddress.ToString("X8"));
-						ram_ban_log_integers.Add(ramReadObjentryAddress);
-						File.WriteAllLines("resources/MDLX/ram_ban_objects.log", ram_ban_log);
-					}
+					this.Banned = true;
+					AddToBans(ramReadObjentryAddress);
 					return;
 				}
 
-				ramModelsHistory.Add(objentryModelName, this);
+				if (ramModelsHistory.ContainsKey(objentryModelName) == false)
+					ramModelsHistory.Add(objentryModelName, this);
 
 				//Object3D model = this.Model.Models.ElementAt(0).Value[0];
 
@@ -911,6 +983,15 @@ namespace BDxGraphiK
 				}*/
 			}
 
+			public static void AddToBans(int objentryAddress)
+			{
+				if (ram_ban_log.Contains(objentryAddress.ToString("X8")) == false)
+				{
+					ram_ban_log.Add(objentryAddress.ToString("X8"));
+					ram_ban_log_integers.Add(objentryAddress);
+					File.WriteAllLines("resources/MDLX/ram_ban_objects.log", ram_ban_log);
+				}
+			}
 
 			public int ANBs_Count
 			{

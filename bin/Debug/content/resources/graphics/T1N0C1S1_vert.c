@@ -15,6 +15,7 @@ out vec3 f_position;
 out vec2 f_texcoord;
 out vec4 f_color;
 out float f_alphatest;
+out float f_skinned;
 
 layout(std140) uniform transform_data
 {
@@ -96,4 +97,5 @@ void main()
 	f_texcoord = v_texcoord;
 	f_color = v_color;
 	f_alphatest = alphatest;
+	f_skinned = 1.0;
 }

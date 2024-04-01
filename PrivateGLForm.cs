@@ -205,6 +205,7 @@ namespace BDxGraphiK
 
 
 			gameWindow.SwapBuffers();
+			ATR++;
 		}
 
 		public void Initialize()
@@ -346,7 +347,7 @@ namespace BDxGraphiK
 			base.OnClosing(e);
 		}
 
-
+		public static long ATR = 0;
 		public void Render(object sender, EventArgs e)
 		{
 			if (this.UpdateFrame != null)
@@ -410,17 +411,74 @@ namespace BDxGraphiK
 			}
 			GL.Disable(EnableCap.ScissorTest);
 			gLControl.SwapBuffers();
+			ATR++;
 		}
 
 		public void RenderGL(GLControl glControl)
 		{
 			SetUniforms(glControl);
 
+
+			/*
+			BlendingFactor[] enumArray = (BlendingFactor[])Enum.GetValues(typeof(BlendingFactor));
+
+			OpenTK.Graphics.OpenGL.DepthFunction[] blendfArray = (OpenTK.Graphics.OpenGL.DepthFunction[])Enum.GetValues(typeof(OpenTK.Graphics.OpenGL.DepthFunction));
+
+			int index0 = (int)Program.glForm.numericUpDown1.Value;
+			int index1 = (int)Program.glForm.numericUpDown2.Value;
+			int index2 = (int)Program.glForm.numericUpDown3.Value;
+			int index3 = (int)Program.glForm.numericUpDown4.Value;
+
+			int index4 = (int)Program.glForm.numericUpDown5.Value;
+			int index5 = (int)Program.glForm.numericUpDown6.Value;
+
+			if (index0 > enumArray.Length - 1) index0 = enumArray.Length - 1;
+			if (index1 > enumArray.Length - 1) index1 = enumArray.Length - 1;
+			if (index2 > enumArray.Length - 1) index2 = enumArray.Length - 1;
+			if (index3 > enumArray.Length - 1) index3 = enumArray.Length - 1;
+
+			if (index4 > blendfArray.Length - 1) index4 = blendfArray.Length - 1;
+			if (index5 > blendfArray.Length - 1) index5 = blendfArray.Length - 1;
+
+
+			Program.glForm.label1.Text = enumArray[index0].ToString();
+			Program.glForm.label2.Text = enumArray[index1].ToString();
+			Program.glForm.label3.Text = enumArray[index2].ToString();
+			Program.glForm.label4.Text = enumArray[index3].ToString();
+
+			Program.glForm.label5.Text = blendfArray[index4].ToString();
+			Program.glForm.label6.Text = blendfArray[index5].ToString();
+
+			GL.BlendFunc(enumArray[index0], enumArray[index1]);
+			GL.DepthFunc(blendfArray[index4]);
 			SetAlphaStep(-1f);
 			glControl.RenderFrame(glControl, null);
 
+			GL.BlendFunc(enumArray[index2], enumArray[index3]);
+			GL.DepthFunc(blendfArray[index5]);
 			SetAlphaStep(1f);
+			glControl.RenderFrame(glControl, null);*/
+
+
+
+			
+			SetAlphaStep(1f);
+			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
 			glControl.RenderFrame(glControl, null);
+
+			SetAlphaStep(2f);
+			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Always);
+			glControl.RenderFrame(glControl, null);
+			
+			SetAlphaStep(3f);
+			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
+			glControl.RenderFrame(glControl, null);
+
+			SetAlphaStep(4f);
+			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
+			glControl.RenderFrame(glControl, null);
+
+			GL.ClearColor(0,0,0,1);
 
 			for (int r = 0; r < glControl.RenderLayers.Count; r++)
 			{
@@ -433,6 +491,7 @@ namespace BDxGraphiK
 					layer.Draw();
 				}
 			}
+			
 		}
 
 		void SetUniforms(GLControl glControl)

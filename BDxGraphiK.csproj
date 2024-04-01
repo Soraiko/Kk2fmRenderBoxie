@@ -22,7 +22,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>5</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -89,6 +89,7 @@
     <Compile Include="AnimatedController.cs" />
     <Compile Include="BinableObject.cs" />
     <Compile Include="Compatibility.cs" />
+    <Compile Include="Frustum.cs" />
     <Compile Include="GLControl.cs">
       <SubType>Component</SubType>
     </Compile>
