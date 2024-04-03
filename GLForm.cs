@@ -133,7 +133,7 @@ namespace BDxGraphiK
 					SmoothCam(2f);
 
 					/* Instance new models on map */
-					while (false&&stream.ReadInt32(PLAYER_ACTIVITY_PTR) > 0 && awaitingModelsMemRegions.Count > 0)
+					while (stream.ReadInt32(PLAYER_ACTIVITY_PTR) > 0 && awaitingModelsMemRegions.Count > 0)
 					{
 						int memRegion = awaitingModelsMemRegions[0];
 						awaitingModelsMemRegions.RemoveAt(0);
@@ -149,17 +149,21 @@ namespace BDxGraphiK
 						}
 						else
 						{
-							Console.WriteLine(newModel.ObjentryModelName);
 							models.Add(newModel);
 							modelsMemRegions.Add(memRegion);
 						}
 					}
 
 					/* Updating Models */
+					RAM_Model[] modelsArray = models.ToArray();
 
-					for (int i = 0; i < models.Count; i++)
+					for (int i = 0; i < modelsArray.Length; i++)
 					{
-						RAM_Model.UpdateModel(models[i], mapDiffuseRegions.Checked);
+						if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked) == false)
+						{
+							modelsMemRegions.RemoveAt(models.IndexOf(modelsArray[i]));
+							models.RemoveAt(models.IndexOf(modelsArray[i]));
+						}
 					}
 				}
 			}
@@ -197,7 +201,6 @@ namespace BDxGraphiK
 			}
 			totalTicks++;
 		}
-
 
 		public Frustrum frustrum2 = new Frustrum();
 		private void smallViewport_RenderFrame(object sender, EventArgs e)

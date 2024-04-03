@@ -47,6 +47,10 @@ void main()
 		if (distance_fog_pos > fog_near_far_min_max.x)
 		{
 			fog = (distance_fog_pos - fog_near_far_min_max.x)/(fog_near_far_min_max.y-fog_near_far_min_max.x);
+			if (fog > 1.0)
+			{
+				fog = 1.0;
+			}
 		}
 		vec3 output = beforeNear * (1.0-fog) + afterFar * fog;
 		

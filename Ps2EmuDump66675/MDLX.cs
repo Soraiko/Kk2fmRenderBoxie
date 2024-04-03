@@ -36,7 +36,7 @@ namespace BDxGraphiK
 		{
 			FileStream fs = new FileStream(filename, FileMode.Open);
 			this.mdlx = new SrkAlternatives.Mdlx(fs);
-			this.mdlx.ExportDAE(@"D:\Users\Daniel\Desktop\daes\model.dae");
+			//this.mdlx.ExportDAE(@"D:\Users\Daniel\Desktop\daes\model.dae");
 
 			for (int i = 0; i< mdlx.models.Count; i++)
 			{
@@ -634,13 +634,64 @@ namespace BDxGraphiK
 
 			public static bool[] RememberFrustrum = new bool[0];
 
-			public static void UpdateModel(RAM_Model modelRamModel, bool mapColorRegions)
+			public static bool UpdateModel(RAM_Model modelRamModel, bool mapColorRegions, bool meshSkipRenders)
 			{
+				if (modelRamModel.MatrixBufferAddress == 0)
+					return false;
 				for (int i = 0; i < modelRamModel.Model.Models.Count; i++)
 				{
 					List<Object3D> models = modelRamModel.Model.Models.ElementAt(i).Value;
 					foreach (Object3D model in models)
 					{
+						int memRegion = modelRamModel.MemoryRegionAddress;
+
+						byte[] memRegionData = modelRamModel.ProcessStream.Read(memRegion, (modelRamModel.MatrixBufferAddress + model.Skeleton.Joints.Count * 0x40 * 2) - memRegion);
+						
+						int ramReadObjentryAddress = System.BitConverter.ToInt32(memRegionData, 0x08);
+						if (ramReadObjentryAddress > 0x01C80000 && ramReadObjentryAddress < 0x01D00000)
+						{
+							string objentryModelName = "obj/" + modelRamModel.ProcessStream.ReadString(ramReadObjentryAddress + 8, 0x20, true) + ".mdlx";
+							if (modelRamModel.ObjentryModelName != objentryModelName)
+								return false;
+						}
+						else
+							return false;
+
+						int ptr = System.BitConverter.ToInt32(memRegionData, 0x670);
+						if (ptr > memRegion && ptr < memRegion + 0x01000000)
+						{
+							if (modelRamModel.MatrixBufferAddress > 0 && modelRamModel.MatrixBufferAddress != modelRamModel.ProcessStream.ReadInt32(ptr + 0x28))
+							{
+								model.Skeleton.MatricesBuffer = new float[model.Skeleton.MatricesBuffer.Length];
+								model.Skeleton.SendMatricesToUniformObject();
+								return false;
+							}
+						}
+
+
+						int totalMeshesCount = model.Meshes.Count;
+						for (int m=0;m<model.Meshes.Count;m++)
+						{
+							if (model.Meshes[i].ShadowMesh != null)
+								totalMeshesCount++;
+						}
+						if (totalMeshesCount > 0)
+						{
+							int pos = modelRamModel.ScalesBufferAddress - memRegion - 0x10;
+							int totalCount_ = totalMeshesCount;
+							while (totalCount_ > 16)
+							{
+								totalCount_ -= 16;
+								pos -= 16;
+							}
+
+							for (int m = 0; m < model.Meshes.Count; m++)
+							{
+								model.Meshes[m].SkipRender = meshSkipRenders && memRegionData[pos+m] == 0;
+							}
+						}
+
+
 						for (int qu = 0; qu < model.QueryUniforms.Count; qu++)
 						{
 							var keypair = model.QueryUniforms.ElementAt(qu);
@@ -649,9 +700,11 @@ namespace BDxGraphiK
 								model.QueryUniformsArrays[qu] = mapColorRegions ? modelRamModel.ColorMultiplicator : Vector4.One;
 							}
 						}
-
+						break;
 					}
+					return models.Count > 0;
 				}
+				return false;
 			}
 
 			public static void DrawModel(RAM_Model modelRamModel, GLControl sender)

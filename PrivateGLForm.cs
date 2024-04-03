@@ -459,9 +459,6 @@ namespace BDxGraphiK
 			SetAlphaStep(1f);
 			glControl.RenderFrame(glControl, null);*/
 
-
-
-			
 			SetAlphaStep(1f);
 			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
 			glControl.RenderFrame(glControl, null);
