@@ -53,6 +53,8 @@ namespace BDxGraphiK
 			if (Directory.Exists(TempPath) == false)
 				Directory.CreateDirectory(TempPath);
 			*/
+
+
 			md5 = System.Security.Cryptography.MD5.Create();
 			Directory.SetCurrentDirectory("content");
 			System.Threading.Thread.CurrentThread.CurrentUICulture = Compatibility.us_cultureinfo_for_decimal_separator;

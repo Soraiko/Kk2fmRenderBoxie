@@ -827,6 +827,7 @@ namespace BDxGraphiK
 			}
 			public static List<string> ram_ban_log;
 			public static List<int> ram_ban_log_integers;
+			public static int ObjentryAddress = 0x1C94100;
 
 			static RAM_Model()
 			{
@@ -884,17 +885,16 @@ namespace BDxGraphiK
 					OpenKh.ProcessStream modelDumpProcessStream = new OpenKh.ProcessStream(processStream.BaseProcess);
 					modelDumpProcessStream.BaseOffset = processStream.BaseOffset;
 					modelDumpProcessStream.Position = this.MDLXAddress;
-					try
-					{
+					/*try
+					{*/
 						SrkAlternatives.Mdlx mdlx = new SrkAlternatives.Mdlx(modelDumpProcessStream);
 						mdlx.Save(objentryModelName);
-					}
+					/*}
 					catch
 					{
-						this.Banned = true;
-						AddToBans(ramReadObjentryAddress);
+
 						return;
-					}
+					}*/
 				}
 
 				if (ramModelsHistory.ContainsKey(objentryModelName))
@@ -926,8 +926,8 @@ namespace BDxGraphiK
 					this.Model.Models.ElementAt(0).Value[0].Skeleton == null ||
 					this.Model.Models.ElementAt(0).Value[0].Skeleton.Joints.Count == 0)
 				{
-					this.Banned = true;
-					AddToBans(ramReadObjentryAddress);
+					/*this.Banned = true;
+					AddToBans(ramReadObjentryAddress);*/
 					return;
 				}
 
