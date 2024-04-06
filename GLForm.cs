@@ -194,7 +194,7 @@ namespace BDxGraphiK
 			RAM_Model[] models = this.models.ToArray();
 			for (int i=0;i< models.Length;i++)
 			{
-				RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked);
+				//RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked);
 			}
 			totalTicks++;
 		}
