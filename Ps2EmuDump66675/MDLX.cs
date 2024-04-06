@@ -17,6 +17,8 @@ using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security.Policy;
 using System.Windows.Forms;
+using System.IO.Ports;
+using System.Runtime.InteropServices;
 
 namespace BDxGraphiK
 {
@@ -394,227 +396,17 @@ namespace BDxGraphiK
 
 		public class RAM_Model
 		{
+			public const int GRAPHICS_ACTIVITY_PTR = 0x0032BAD8;
+			public const int FRAME_SKIP = 0x00349E1C;
+			public const int CAMERA_TARGET = 0x00348754;
+
 			public new string ToString()
 			{
 				return this.ObjentryModelName;
 			}
 
-
-			public List<BinaryWriter> binaryWriters = new List<BinaryWriter>(0);
-			public BinaryWriter binaryWriter = null;
-
-			/*public int PlayingANB_Address
-			{
-				get
-				{
-					int address = this.ProcessStream.ReadInt32(this.MemoryRegionAddress + 0x14C) - 0x100;
-					byte[] buff = new byte[0x100];
-					buff = this.ProcessStream.Read(address, 0x100);
-					for (int i = 0xF0; i > 0; i -= 0x10)
-					{
-						if (buff[i] != 0x42) continue;
-						if (buff[i + 1] != 0x41) continue;
-						if (buff[i + 2] != 0x52) continue;
-						if (buff[i + 3] != 0x01) continue;
-						return address + i;
-					}
-					return -1;
-				}
-				set
-				{
-					byte[] buff = new byte[0x100];
-					buff = this.ProcessStream.Read(value, 0x100);
-					int count = BitConverter.ToInt32(buff, 4);
-					for (int i = 0; i < count; i++)
-					{
-						if (BitConverter.ToInt16(buff, 0x10 + i * 0x10) == 9)
-						{
-							value = BitConverter.ToInt32(buff, 0x18 + i * 0x10);
-							break;
-						}
-					}
-					this.ProcessStream.WriteInt32(this.MemoryRegionAddress + 0x14C, value);
-				}
-			}*/
-
 			public RAM_Model Keyblade = null;
 
-			public int TransformAttachMemRegionPointer
-			{
-				get
-				{
-					return this.ProcessStream.ReadInt32(this.MemoryRegionAddress + 0x570);
-				}
-				set
-				{
-					this.ProcessStream.WriteInt32(this.MemoryRegionAddress + 0x570, value);
-				}
-			}
-
-			public int TransformAttachBone
-			{
-				get
-				{
-					return this.ProcessStream.ReadInt32(this.MemoryRegionAddress + 0x574);
-				}
-				set
-				{
-					this.ProcessStream.WriteInt32(this.MemoryRegionAddress + 0x574, value);
-				}
-			}
-
-			public int KeybladeMemRegionPointer
-			{
-				get
-				{
-					return this.ProcessStream.ReadInt32(this.MemoryRegionAddress + 0xAF8);
-				}
-				
-			}
-
-			public bool RenderShadow
-			{
-				get
-				{
-					return (this.ProcessStream.ReadByte(this.MemoryRegionAddress + 0x10d) & 0b10) == 0;
-				}
-			}
-			public bool RenderMeshes
-			{
-				get
-				{
-					return (this.ProcessStream.ReadByte(this.MemoryRegionAddress + 0x10d) & 0b01) == 0;
-				}
-			}
-
-			public int FallingHeaderIndex;
-
-			public byte TransitingFlag
-			{
-				get { return this.ProcessStream.ReadByte(this.MemoryRegionAddress + 0x0C); }
-				set { this.ProcessStream.WriteByte(this.MemoryRegionAddress + 0x0C, value); }
-			}
-
-			public float Opacity
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x834)  * this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x82C); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x834, value); }
-			}
-
-			public int MotionTrigger_Address
-			{
-				get { return this.ProcessStream.ReadInt32(this.MemoryRegionAddress + 0x150); }
-				set { this.ProcessStream.WriteInt32(this.MemoryRegionAddress + 0x150, value); }
-			}
-
-			public int FallingAnimation
-			{
-				get { return this.ProcessStream.ReadInt32(this.MemoryRegionAddress + 0x100); }
-				set { this.ProcessStream.WriteInt32(this.MemoryRegionAddress + 0x100, value); }
-			}
-
-			public float FallingAcceleration
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x120); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x120, value); }
-			}
-
-			public float AnimationMaxFrame
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x16C); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x16C, value); }
-			}
-
-			public float AnimationFrame
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x170); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x170, value); }
-			}
-
-			public float AnimationPlaybackStep
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x234); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x234, value); }
-			}
-
-			public float PositionX
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x540); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x540, value); }
-			}
-			public Vector3 SpawnPosition;
-
-			public float PositionY
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x544); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x544, value); }
-			}
-			public float PositionZ
-			{
-				get { return this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x548); }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x548, value); }
-			}
-
-			public float RotationY
-			{
-				get { return -this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x66C) + MathHelper.Pi; }
-				set { this.ProcessStream.WriteSingle(this.MemoryRegionAddress + 0x66C, -(value- MathHelper.Pi)); }
-			}
-
-			float lastRotY = Single.NaN;
-
-			public Vector4 ColorMultiplicator
-			{
-				get
-				{
-					byte[] vals = this.ProcessStream.Read(this.MemoryRegionAddress + 0x8BC, 4);
-					return new Vector4(vals[0] / 128f, vals[1] / 128f, vals[2] / 128f, this.Opacity);
-				}
-			}
-
-			public float PrincipalRotationY
-			{
-				get
-				{
-					double val = -this.ProcessStream.ReadSingle(this.MemoryRegionAddress + 0x55C) + MathHelper.Pi;
-					val = Math.Atan2(Math.Sin(val), Math.Cos(val));
-
-					if (Single.IsNaN(lastRotY) == false)
-					{
-						double difference = lastRotY - val;
-						while (difference < 0)
-							difference += 2 * Math.PI;
-						while (difference >= 2 * Math.PI)
-							difference -= 2 * Math.PI;
-						if (difference <= Math.PI)
-							val = (lastRotY - difference);
-						else
-							val = (lastRotY + (2 * Math.PI - difference));
-					}
-					lastRotY = (float)val;
-					return lastRotY;
-				}
-			}
-
-			public float GetPrincipalRotation(double val)
-			{
-				val = Math.Atan2(Math.Sin(val), Math.Cos(val));
-
-				if (Single.IsNaN(lastRotY) == false)
-				{
-					double difference = lastRotY - val;
-					while (difference < 0)
-						difference += 2 * Math.PI;
-					while (difference >= 2 * Math.PI)
-						difference -= 2 * Math.PI;
-					if (difference <= Math.PI)
-						val = (lastRotY - difference);
-					else
-						val = (lastRotY + (2 * Math.PI - difference));
-				}
-				lastRotY = (float)val;
-				return lastRotY;
-			}
 
 			public SrkProcessStream ProcessStream;
 			public int MemoryRegionAddress;
@@ -625,19 +417,220 @@ namespace BDxGraphiK
 
 			List<byte[]> ANBs;
 			public MDLX Model;
+
+
 			public int ScalesBufferAddress;
 			public int RotatesBufferAddress;
 			public int TranslatesBufferAddress;
 			public int MatrixBufferAddress;
 
-			static long mapRenderTick = 0;
+			public int BonesCount;
+
 
 			public static bool[] RememberFrustrum = new bool[0];
+			public byte[] MemRegionData;
 
-			public static bool UpdateModel(RAM_Model modelRamModel, bool mapColorRegions, bool meshSkipRenders)
+			public static Vector3 UpAxises = new Vector3(Vector3.UnitX.X, -Vector3.UnitY.Y, -Vector3.UnitZ.Z);
+
+			public Vector4 ColorMultiplicator;
+			public Vector3 WorldPosition = new Vector3(Single.NaN);
+
+			public Vector3 RootTransform = new Vector3(Single.NaN);
+
+
+			public float WorldRotationY = Single.NaN;
+			public int ANBOffset;
+
+			public float Frame = Single.NaN;
+			public float MaxFrame = Single.NaN;
+
+
+
+			public bool ReadMemRegionData(Object3D model)
 			{
-				if (modelRamModel.MatrixBufferAddress == 0)
+				this.ProcessStream.Read(this.MemoryRegionAddress, ref this.MemRegionData);
+
+				int ramReadObjentryAddress = System.BitConverter.ToInt32(this.MemRegionData, 0x08);
+				if (ramReadObjentryAddress > 0x01C80000 && ramReadObjentryAddress < 0x01D00000)
+				{
+					string objentryModelName = "obj/" + this.ProcessStream.ReadString(ramReadObjentryAddress + 8, 0x20, true) + ".mdlx";
+					if (this.ObjentryModelName != objentryModelName)
+						return false;
+				}
+				else
 					return false;
+
+				int ptr = System.BitConverter.ToInt32(this.MemRegionData, 0x670);
+				if (ptr > this.MemoryRegionAddress && ptr < this.MemoryRegionAddress + 0x01000000)
+				{
+					if (this.MatrixBufferAddress > 0 && this.MatrixBufferAddress != this.ProcessStream.ReadInt32(ptr + 0x28))
+					{
+						model.Skeleton.MatricesBuffer = new float[model.Skeleton.MatricesBuffer.Length];
+						model.Skeleton.SendMatricesToUniformObject();
+						return false;
+					}
+				}
+				return true;
+			}
+
+
+			public void UpdateWithMemregionData(Object3D model)
+			{
+				/*if (this.ObjentryModelName.Contains("GENTL") == false)
+					return;*/
+
+				float opacity = System.BitConverter.ToSingle(this.MemRegionData, 0x834) * System.BitConverter.ToSingle(this.MemRegionData, 0x82C) * this.MemRegionData[0x3AC+3]/128f;
+				int ANBOffset = System.BitConverter.ToInt32(this.MemRegionData, 0x14C);
+				float Frame = System.BitConverter.ToSingle(this.MemRegionData, 0x170);
+				float MaxFrame = System.BitConverter.ToSingle(this.MemRegionData, 0x16C);
+
+				int positionInfo_offset = this.ProcessStream.ReadInt32(ANBOffset + 0x90 + 0x2C);
+
+				bool[] positionInfo_hasCurveIndex = new bool[3 + 3 + 3];
+				Vector3[] positionInfo_scale_rot_trans = new Vector3[3];
+				bool hasOffset = false;
+
+				if (positionInfo_offset > 0)
+				{
+					byte[] positionInfoBytes = new byte[0x60];
+					this.ProcessStream.Read(positionInfo_offset + ANBOffset + 0x90, ref positionInfoBytes);
+					hasOffset = System.BitConverter.ToInt32(positionInfoBytes, 0x0C) > 0;
+					for (int i = 0; i < positionInfo_hasCurveIndex.Length; i++)
+					{
+						positionInfo_hasCurveIndex[i] = System.BitConverter.ToInt32(positionInfoBytes, 0x30 + i * 4) > -1;
+						positionInfo_scale_rot_trans[i / 3][i % 3] = System.BitConverter.ToSingle(positionInfoBytes, (i / 3) * 0x10 + (i % 3) * 0x04);
+					}
+				}
+
+
+				double readDouble = System.BitConverter.ToSingle(this.MemRegionData, 0x55C) + MathHelper.Pi;
+				readDouble = Math.Atan2(Math.Sin(readDouble), Math.Cos(readDouble));
+				if (Single.IsNaN(this.WorldRotationY) == false)
+				{
+					double difference = this.WorldRotationY - readDouble;
+					while (difference < 0) difference += 2 * Math.PI;
+					while (difference >= 2 * Math.PI) difference -= 2 * Math.PI;
+					if (difference <= Math.PI) readDouble = (this.WorldRotationY - difference); else readDouble = (this.WorldRotationY + (2 * Math.PI - difference));
+				}
+				float worldRotY = (float)readDouble;
+				Vector3 worldPos = new Vector3(System.BitConverter.ToSingle(this.MemRegionData, 0x540), System.BitConverter.ToSingle(this.MemRegionData, 0x544), System.BitConverter.ToSingle(this.MemRegionData, 0x548));
+
+				Matrix4[] matrices = new Matrix4[this.BonesCount];
+				Marshal.Copy(this.MemRegionData, this.MatrixBufferAddress-this.MemoryRegionAddress + this.BonesCount * 0x40, Marshal.UnsafeAddrOfPinnedArrayElement(matrices, 0), this.BonesCount * 0x40);
+				
+
+				bool ingame = this.ProcessStream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) > 0;
+				float rotYTransform = System.BitConverter.ToSingle(this.MemRegionData, 0x1EC);
+
+				worldRotY += UpAxises.Y*rotYTransform;
+
+				Vector3 rootTransform = new Vector3(
+				System.BitConverter.ToSingle(this.MemRegionData, 0x1E0),
+				System.BitConverter.ToSingle(this.MemRegionData, 0x1E4),
+				System.BitConverter.ToSingle(this.MemRegionData, 0x1E8));
+
+				Vector3 transTest = matrices[0].ExtractTranslation();
+
+				if (ingame)
+				{
+					for (int i = 0; i < 3; i++)
+					{
+						if (Math.Abs(this.RootTransform[i]) < 0.000001)
+							transTest[i] = 0;
+					}
+					bool fixPos = (hasOffset == false || ANBOffset != this.ANBOffset);
+
+					if (hasOffset && ANBOffset == this.ANBOffset && Vector3.Distance(this.RootTransform, rootTransform) > positionInfo_scale_rot_trans[2].Length/10f)
+						fixPos = true;
+					if (fixPos && (transTest + this.RootTransform).Length < this.RootTransform.Length / 10f)
+						rootTransform = this.RootTransform;
+					for (int m = 0; m < this.BonesCount; m++)
+					{
+						this.Matrices[m] = matrices[m] * Matrix4.CreateTranslation(rootTransform);
+						//model.Skeleton.Joints[m].ComputedTransform = matrices[m] * Matrix4.CreateTranslation(rootTransform);
+					}
+				}
+				else
+				{
+					for (int m = 0; m < this.BonesCount; m++)
+					{
+						this.Matrices[m] = matrices[m] * Matrix4.CreateTranslation(UpAxises * -rootTransform);
+						//model.Skeleton.Joints[m].ComputedTransform = matrices[m] * Matrix4.CreateTranslation(UpAxises * -rootTransform);
+					}
+				}
+
+				model.Skeleton.ReverseComputedMatrices(ref this.Matrices, 0);
+				//model.Skeleton.ReverseComputedMatrices();
+
+
+				int transformAttachMemRegionPointer = System.BitConverter.ToInt32(this.MemRegionData, 0x570);
+				int transformAttachBone = System.BitConverter.ToInt32(this.MemRegionData, 0x574);
+
+				this.Transform = Matrix4.CreateRotationY(UpAxises.Y * worldRotY) * Matrix4.CreateTranslation(UpAxises * worldPos);
+				//model.Skeleton.Transform = Matrix4.CreateRotationY(UpAxises.Y * worldRotY) * Matrix4.CreateTranslation(UpAxises * worldPos);
+
+				if (transformAttachMemRegionPointer > 0)
+				{
+					int[] modelsMemRegionsArray = Program.glForm.modelsMemRegions.ToArray();
+					MDLX.RAM_Model[] modelsArray = Program.glForm.models.ToArray();
+
+					if (ANBOffset == 0)
+						opacity = 0;
+					
+					if ((this.MemRegionData[0x10D] & 0b10) > 0)
+						opacity = 0;
+
+					//return (this.ProcessStream.ReadByte(this.MemoryRegionAddress + 0x10d) & 0b01) == 0;
+
+					for (int i = 0; i < modelsMemRegionsArray.Length; i++)
+					{
+						var model_ = modelsArray[i];
+						if (modelsMemRegionsArray[i] == transformAttachMemRegionPointer)
+						{
+							if (model_.ObjentryModelName.Contains("/W_") == false || System.BitConverter.ToInt32(model_.MemRegionData, 0xAF8) == this.MemoryRegionAddress)
+							{
+								int attachBone = transformAttachBone;
+								if (attachBone > model_.BonesCount)
+								{
+									//model.Skeleton.Transform = model_.Model.Models.ElementAt(0).Value[0].Skeleton.Transform;
+									this.Transform = model_.Transform;
+								}
+								else
+								{
+									//model.Skeleton.Transform = model_.Model.Models.ElementAt(0).Value[0].Skeleton.Joints[attachBone].ComputedTransform;
+									this.Transform = model_.Matrices[attachBone] * model_.Transform;
+								}
+							}
+							break;
+						}
+					}
+				}
+
+
+				this.RootTransform = rootTransform;
+
+				model.Skeleton.ComputeMatrices(ref this.Matrices, 0);
+
+				/*model.Skeleton.ComputeMatrices();
+				model.Skeleton.PassComputedTransforms();
+				model.Skeleton.SendMatricesToUniformObject();*/
+
+
+				this.ANBOffset = ANBOffset;
+				this.Frame = Frame;
+				this.MaxFrame = MaxFrame;
+
+				this.ColorMultiplicator = new Vector4(this.MemRegionData[0x8BC + 0x00] / 128f, this.MemRegionData[0x8BC + 0x01] / 128f, this.MemRegionData[0x8BC + 0x02] / 128f, opacity);
+				this.WorldPosition = worldPos;
+				this.WorldRotationY = worldRotY;
+			}
+
+			public Matrix4[] Matrices;
+			public Matrix4 Transform;
+
+
+			public static bool UpdateModel(RAM_Model modelRamModel, bool mapDiffuseRegions, bool meshSkipRenders)
+			{
 				for (int i = 0; i < modelRamModel.Model.Models.Count; i++)
 				{
 					List<Object3D> models = modelRamModel.Model.Models.ElementAt(i).Value;
@@ -645,29 +638,10 @@ namespace BDxGraphiK
 					{
 						int memRegion = modelRamModel.MemoryRegionAddress;
 
-						byte[] memRegionData = modelRamModel.ProcessStream.Read(memRegion, (modelRamModel.MatrixBufferAddress + model.Skeleton.Joints.Count * 0x40 * 2) - memRegion);
-						
-						int ramReadObjentryAddress = System.BitConverter.ToInt32(memRegionData, 0x08);
-						if (ramReadObjentryAddress > 0x01C80000 && ramReadObjentryAddress < 0x01D00000)
-						{
-							string objentryModelName = "obj/" + modelRamModel.ProcessStream.ReadString(ramReadObjentryAddress + 8, 0x20, true) + ".mdlx";
-							if (modelRamModel.ObjentryModelName != objentryModelName)
-								return false;
-						}
+						if (modelRamModel.ReadMemRegionData(model))
+							modelRamModel.UpdateWithMemregionData(model);
 						else
 							return false;
-
-						int ptr = System.BitConverter.ToInt32(memRegionData, 0x670);
-						if (ptr > memRegion && ptr < memRegion + 0x01000000)
-						{
-							if (modelRamModel.MatrixBufferAddress > 0 && modelRamModel.MatrixBufferAddress != modelRamModel.ProcessStream.ReadInt32(ptr + 0x28))
-							{
-								model.Skeleton.MatricesBuffer = new float[model.Skeleton.MatricesBuffer.Length];
-								model.Skeleton.SendMatricesToUniformObject();
-								return false;
-							}
-						}
-
 
 						int totalMeshesCount = model.Meshes.Count;
 						for (int m=0;m<model.Meshes.Count;m++)
@@ -687,17 +661,16 @@ namespace BDxGraphiK
 
 							for (int m = 0; m < model.Meshes.Count; m++)
 							{
-								model.Meshes[m].SkipRender = meshSkipRenders && memRegionData[pos+m] == 0;
+								model.Meshes[m].SkipRender = meshSkipRenders && modelRamModel.MemRegionData[pos+m] == 0;
 							}
 						}
-
 
 						for (int qu = 0; qu < model.QueryUniforms.Count; qu++)
 						{
 							var keypair = model.QueryUniforms.ElementAt(qu);
 							if (keypair.Key == "colormultiplicator")
 							{
-								model.QueryUniformsArrays[qu] = mapColorRegions ? modelRamModel.ColorMultiplicator : Vector4.One;
+								model.QueryUniformsArrays[qu] = mapDiffuseRegions ? modelRamModel.ColorMultiplicator : Vector4.One;
 							}
 						}
 						break;
@@ -707,14 +680,48 @@ namespace BDxGraphiK
 				return false;
 			}
 
-			public static void DrawModel(RAM_Model modelRamModel, GLControl sender)
+			public static void DrawModel(RAM_Model ramModel, GLControl sender, bool interframeInterpolate)
 			{
-				for (int i=0;i< modelRamModel.Model.Models.Count;i++)
+				for (int i=0;i< ramModel.Model.Models.Count;i++)
 				{
-					List<Object3D> models = modelRamModel.Model.Models.ElementAt(i).Value;
+					List<Object3D> models = ramModel.Model.Models.ElementAt(i).Value;
 					foreach (Object3D model in models)
 					{
+						if (sender.RenderStep == 0)
+						{
+							for (int m=0;m< ramModel.BonesCount;m++)
+							{
+								if (interframeInterpolate)
+								{
+									Matrix4 a = model.Skeleton.Joints[m].ComputedTransform;
+									Matrix4 b = (ramModel.Matrices[m] * ramModel.Transform);
+
+									Vector3 scale_a = a.ExtractScale();
+									Vector3 scale_b = b.ExtractScale();
+
+									OpenTK.Quaternion rotate_a = a.ExtractRotation();
+									OpenTK.Quaternion rotate_b = b.ExtractRotation();
+
+									Vector3 translate_a = a.ExtractTranslation();
+									Vector3 translate_b = b.ExtractTranslation();
+
+
+									model.Skeleton.Joints[m].ComputedTransform =
+										Matrix4.CreateScale(scale_a * 0.5f + scale_b * 0.5f) *
+										Matrix4.CreateFromQuaternion(OpenTK.Quaternion.Slerp(rotate_a, rotate_b, 0.5f)) *
+										Matrix4.CreateTranslation(translate_a * 0.5f + translate_b * 0.5f);
+								}
+								else
+								{
+									model.Skeleton.Joints[m].ComputedTransform = (ramModel.Matrices[m] * ramModel.Transform);
+								}
+							}
+
+							model.Skeleton.PassComputedTransforms();
+							model.Skeleton.SendMatricesToUniformObject();
+						}
 						model.Draw(false);
+						break;
 					}
 				}
 			}
@@ -723,8 +730,7 @@ namespace BDxGraphiK
 			{
 				if (mapRamModel !=null)
 				{
-					long currTick = Program.glForm.totalTicks;
-					if (currTick != mapRenderTick)
+					if (sender.RenderStep == 0)
 					{
 						if (frustrum != null)
 						{
@@ -779,10 +785,6 @@ namespace BDxGraphiK
 								}
 							}
 						}
-						if (mapRamModel.Model.Models.ContainsKey("MAP"))
-						{
-						}
-						mapRenderTick = currTick;
 					}
 					MDLX.DrawMap(mapRamModel.Model, fogEnabled, sender);
 				}
@@ -844,29 +846,35 @@ namespace BDxGraphiK
 				}
 			}
 
-			public bool Banned;
+			public bool Aborted;
 
 			public RAM_Model(SrkProcessStream processStream, int memoryRegionAddress)
 			{
-				this.Banned = false;
+				if (processStream.ReadInt32(memoryRegionAddress + 0x148) != memoryRegionAddress)
+				{
+					this.Aborted = true;
+					return;
+				}
+					
 				int ramReadObjentryAddress = processStream.ReadInt32(memoryRegionAddress + 8);
 
 				this.ProcessStream = processStream;
 				this.MemoryRegionAddress = memoryRegionAddress;
 
-
 				this.MDLXAddress = processStream.ReadInt32(memoryRegionAddress + 0x7AC);
-				/*if (processStream.ReadString(this.MDLXAddress, 3, false) != "BAR")
+				if (processStream.ReadString(this.MDLXAddress, 3, false) != "BAR")
 				{
-					this.Banned = true;
-					AddToBans(ramReadObjentryAddress);
+					this.Aborted = true;
 					return;
-				}*/
+				}
 				this.MSETAddress = processStream.ReadInt32(memoryRegionAddress + 0x140);
 
 
-				/*if (processStream.ReadString(this.MSETAddress, 3, false) != "BAR")
-					return;*/
+				if (this.MSETAddress>0 && processStream.ReadString(this.MSETAddress, 3, false) != "BAR")
+				{
+					this.Aborted = true;
+					return;
+				}
 
 				if (Directory.Exists("obj") == false)
 					Directory.CreateDirectory("obj");
@@ -885,16 +893,16 @@ namespace BDxGraphiK
 					OpenKh.ProcessStream modelDumpProcessStream = new OpenKh.ProcessStream(processStream.BaseProcess);
 					modelDumpProcessStream.BaseOffset = processStream.BaseOffset;
 					modelDumpProcessStream.Position = this.MDLXAddress;
-					/*try
-					{*/
+					try
+					{
 						SrkAlternatives.Mdlx mdlx = new SrkAlternatives.Mdlx(modelDumpProcessStream);
 						mdlx.Save(objentryModelName);
-					/*}
+					}
 					catch
 					{
-
+						this.Aborted = true;
 						return;
-					}*/
+					}
 				}
 
 				if (ramModelsHistory.ContainsKey(objentryModelName))
@@ -926,15 +934,13 @@ namespace BDxGraphiK
 					this.Model.Models.ElementAt(0).Value[0].Skeleton == null ||
 					this.Model.Models.ElementAt(0).Value[0].Skeleton.Joints.Count == 0)
 				{
-					/*this.Banned = true;
-					AddToBans(ramReadObjentryAddress);*/
+					this.Aborted = true;
 					return;
 				}
 
 				if (ramModelsHistory.ContainsKey(objentryModelName) == false)
 					ramModelsHistory.Add(objentryModelName, this);
 
-				//Object3D model = this.Model.Models.ElementAt(0).Value[0];
 
 				if (this.MSETAddress > 0 && Directory.Exists(objentryMsetName) == false)
 					Directory.CreateDirectory(objentryMsetName);
@@ -962,7 +968,20 @@ namespace BDxGraphiK
 					if (ptrd > memoryRegionAddress && ptrd < memoryRegionAddress + 0x01000000)
 					{
 						this.MatrixBufferAddress = ptrd;
+						this.BonesCount = this.Model.Models.ElementAt(0).Value[0].Skeleton.Joints.Count;
+						this.Matrices = new Matrix4[this.BonesCount];
+						this.MemRegionData = new byte[this.MatrixBufferAddress-this.MemoryRegionAddress + 0x40 * this.BonesCount * 2];
 					}
+					else
+					{
+						this.Aborted = true;
+						return;
+					}
+				}
+				else
+				{
+					this.Aborted = true;
+					return;
 				}
 
 				/*

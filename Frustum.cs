@@ -94,6 +94,7 @@ namespace BDxGraphiK
 			// glGetFloatv() is used to extract information about our OpenGL world.
 			// Below, we pass in GL_PROJECTION_MATRIX to abstract our projection matrix.
 			// It then stores the matrix into an array of [16].
+
 			GL.GetFloat(GetPName.ProjectionMatrix, proj);
 
 			// By passing in GL_MODELVIEW_MATRIX, we can abstract our model view matrix.

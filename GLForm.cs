@@ -89,8 +89,6 @@ namespace BDxGraphiK
 		}
 
 		MDLX.RAM_Model map;
-		const int GRAPHICS_ACTIVITY_PTR = 0x0032BAD8;
-		const int PLAYER_ACTIVITY_PTR = 0x00349E1C;
 
 		Stopwatch stp = new Stopwatch();
 
@@ -106,7 +104,7 @@ namespace BDxGraphiK
 			string mapName = "m" + stream.ReadString(0x00348D69, 31, true);
 
 			/* Graphics active */
-			if (stream.ReadInt32(GRAPHICS_ACTIVITY_PTR) == 1)
+			if (stream.ReadInt32(MDLX.RAM_Model.GRAPHICS_ACTIVITY_PTR) == 1)
 			{
 				float testFOV = (float)((stream.ReadSingle(0x003A7BB8) / Math.PI) * 180.0);
 
@@ -133,22 +131,19 @@ namespace BDxGraphiK
 					SmoothCam(2f);
 
 					/* Instance new models on map */
-					while (stream.ReadInt32(PLAYER_ACTIVITY_PTR) > 0 && awaitingModelsMemRegions.Count > 0)
+					while (stream.ReadInt32(MDLX.RAM_Model.GRAPHICS_ACTIVITY_PTR) == 1 && awaitingModelsMemRegions.Count > 0)
 					{
 						int memRegion = awaitingModelsMemRegions[0];
 						awaitingModelsMemRegions.RemoveAt(0);
 
-						if (stream.ReadInt32(memRegion + 0x148) != memRegion)
-							continue;
-
 						MDLX.RAM_Model newModel = new MDLX.RAM_Model(stream, memRegion);
-
-						if (newModel.Banned)
+						if (newModel.Aborted)
 						{
-							Console.WriteLine("New ban entry");
+
 						}
 						else
 						{
+							MDLX.RAM_Model.RememberFrustrum = new bool[0];
 							models.Add(newModel);
 							modelsMemRegions.Add(memRegion);
 						}
@@ -195,9 +190,11 @@ namespace BDxGraphiK
 			frustrum1.CalculateFrustum();
 
 			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, frustrum1);
-			for (int i=0;i< models.Count;i++)
+
+			RAM_Model[] models = this.models.ToArray();
+			for (int i=0;i< models.Length;i++)
 			{
-				RAM_Model.DrawModel(models[i], sender as GLControl);
+				RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked);
 			}
 			totalTicks++;
 		}
@@ -227,7 +224,7 @@ namespace BDxGraphiK
 
 		public void SmoothCam(float step)
 		{
-			if (stream.ReadInt32(0x00348754) == 0)
+			if (stream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) == 0)
 				step = 1f;
 
 			int position = 0x003A7FC0;
@@ -294,8 +291,8 @@ namespace BDxGraphiK
 		}
 
 
-		List<int> modelsMemRegions = new List<int>(0);
-		List<MDLX.RAM_Model> models = new List<MDLX.RAM_Model>(0);
+		public List<int> modelsMemRegions = new List<int>(0);
+		public List<MDLX.RAM_Model> models = new List<MDLX.RAM_Model>(0);
 		public List<int> awaitingModelsMemRegions = new List<int>();
 
 		public unsafe void SearchModels()

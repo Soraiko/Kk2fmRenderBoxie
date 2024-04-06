@@ -16,6 +16,8 @@ namespace BDxGraphiK
 {
 	public class GLControl:Panel
 	{
+		public int RenderStep = 0;
+
 		public static System.Drawing.Rectangle Viewport;
 		public static void GLViewport(int x, int y, int width, int height)
 		{

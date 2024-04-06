@@ -417,7 +417,7 @@ namespace BDxGraphiK
 		public void RenderGL(GLControl glControl)
 		{
 			SetUniforms(glControl);
-
+			glControl.RenderStep = 0;
 
 			/*
 			BlendingFactor[] enumArray = (BlendingFactor[])Enum.GetValues(typeof(BlendingFactor));
@@ -462,18 +462,22 @@ namespace BDxGraphiK
 			SetAlphaStep(1f);
 			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
 			glControl.RenderFrame(glControl, null);
+			glControl.RenderStep++;
 
 			SetAlphaStep(2f);
 			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Always);
 			glControl.RenderFrame(glControl, null);
-			
+			glControl.RenderStep++;
+
 			SetAlphaStep(3f);
 			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
 			glControl.RenderFrame(glControl, null);
+			glControl.RenderStep++;
 
 			SetAlphaStep(4f);
 			GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);
 			glControl.RenderFrame(glControl, null);
+			glControl.RenderStep++;
 
 			GL.ClearColor(0,0,0,1);
 
@@ -484,6 +488,7 @@ namespace BDxGraphiK
 				{
 					layer.BindBuffer();
 					glControl.RenderFrame(glControl, null);
+					glControl.RenderStep++;
 					layer.UnbindBuffer();
 					layer.Draw();
 				}
