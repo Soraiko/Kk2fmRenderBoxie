@@ -85,6 +85,11 @@ namespace BDxGraphiK
 			object3D.QueryUniforms = this.QueryUniforms;
 			object3D.QueryUniformsArrays = this.QueryUniformsArrays;
 			object3D.BufferBinary();
+			for (int m = 0; m < this.Meshes.Count; m++)
+			{
+				object3D.Meshes[m].QueryUniforms = this.Meshes[m].QueryUniforms;
+				object3D.Meshes[m].QueryUniformsArrays = this.Meshes[m].QueryUniformsArrays;
+			}
 			return object3D;
 		}
 

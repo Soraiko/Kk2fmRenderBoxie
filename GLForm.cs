@@ -26,6 +26,12 @@ using static System.Net.WebRequestMethods;
 using static BDxGraphiK.MDLX;
 using System.Runtime.Remoting.Messaging;
 
+
+/*
+ TODO:
+skate IK
+corriger skip renders des models qui est allé en dehors des mes bytes (01 00 00 01 01 01 )[]
+ */
 namespace BDxGraphiK
 {
 	public partial class GLForm : PrivateGLForm
@@ -149,15 +155,18 @@ namespace BDxGraphiK
 						}
 					}
 
-					/* Updating Models */
-					RAM_Model[] modelsArray = models.ToArray();
-
-					for (int i = 0; i < modelsArray.Length; i++)
+					if (showModels.Checked)
 					{
-						if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked) == false)
+						/* Updating Models */
+						RAM_Model[] modelsArray = models.ToArray();
+
+						for (int i = 0; i < modelsArray.Length; i++)
 						{
-							modelsMemRegions.RemoveAt(models.IndexOf(modelsArray[i]));
-							models.RemoveAt(models.IndexOf(modelsArray[i]));
+							if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked) == false)
+							{
+								modelsMemRegions.RemoveAt(models.IndexOf(modelsArray[i]));
+								models.RemoveAt(models.IndexOf(modelsArray[i]));
+							}
 						}
 					}
 				}
@@ -189,12 +198,17 @@ namespace BDxGraphiK
 
 			frustrum1.CalculateFrustum();
 
-			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, frustrum1);
+			RAM_Model.DrawMap(map, sender as GLControl, showMap.Checked, fog.Checked, frustumCulling.CheckState, frustrum1);
 
-			RAM_Model[] models = this.models.ToArray();
-			for (int i=0;i< models.Length;i++)
+			SmoothCam2(4f, glControl1.RenderStep == 0);
+
+			if (showModels.Checked)
 			{
-				//RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked);
+				RAM_Model[] models = this.models.ToArray();
+				for (int i = 0; i < models.Length; i++)
+				{
+					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+				}
 			}
 			totalTicks++;
 		}
@@ -202,11 +216,22 @@ namespace BDxGraphiK
 		public Frustrum frustrum2 = new Frustrum();
 		private void smallViewport_RenderFrame(object sender, EventArgs e)
 		{
-			Matrix4 lookat = Matrix4.LookAt(cameraLookAt, cameraPosition, Vector3.UnitY);
+			Matrix4 lookat = Matrix4.LookAt(cameraLookAt - (cameraPosition -cameraLookAt)/2f, cameraPosition, Vector3.UnitY);
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref lookat);
 
-			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, null);
+
+			if (showMap.Checked)
+				RAM_Model.DrawMap(map, sender as GLControl, showMap.Checked, fog.Checked, frustumCulling.CheckState, null);
+
+			if (showModels.Checked)
+			{
+				RAM_Model[] models = this.models.ToArray();
+				for (int i = 0; i < models.Length; i++)
+				{
+					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+				}
+			}
 		}
 
 		public Frustrum frustrum3 = new Frustrum();
@@ -216,7 +241,17 @@ namespace BDxGraphiK
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref lookat);
 
-			RAM_Model.DrawMap(map, sender as GLControl, fog.Checked, frustumCulling.CheckState, null);
+			if (showMap.Checked)
+				RAM_Model.DrawMap(map, sender as GLControl, showMap.Checked, fog.Checked, frustumCulling.CheckState, null);
+
+			if (showModels.Checked)
+			{
+				RAM_Model[] models = this.models.ToArray();
+				for (int i = 0; i < models.Length; i++)
+				{
+					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+				}
+			}
 		}
 
 		public Vector3 cameraPosition = Vector3.Zero;
@@ -224,6 +259,7 @@ namespace BDxGraphiK
 
 		public void SmoothCam(float step)
 		{
+			return;
 			if (stream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) == 0)
 				step = 1f;
 
@@ -232,10 +268,35 @@ namespace BDxGraphiK
 
 			Vector3 camPosition = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
 			Vector3 camLookAt = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
-			
+
 
 			cameraPosition += (camPosition - cameraPosition) / step;
 			cameraLookAt += (camLookAt - cameraLookAt) / step;
+		}
+
+
+
+
+		public void SmoothCam2(float step, bool update)
+		{
+			if (stream == null)
+				return;
+
+			if (stream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) == 0)
+				step = 1f;
+
+			int position = 0x003A7FC0;
+			int lookAt = 0x003A7FD0;
+
+			Vector3 camPosition = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
+			Vector3 camLookAt = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
+
+
+			if (update)
+			{
+				cameraPosition += (camPosition - cameraPosition) / step;
+				cameraLookAt += (camLookAt - cameraLookAt) / step;
+			}
 		}
 
 
@@ -279,15 +340,13 @@ namespace BDxGraphiK
 				GLControl.ShaderPrograms.Add(shader.Handle);
 			}
 
-			
 			GLControl.RenderLayer mapGlow = new GLControl.RenderLayer();
 			string sourceCcode = System.IO.File.ReadAllText("resources/MDLX/MAPGLOW_output_frag.c");
 			string[] textureSize = sourceCcode.Substring(sourceCcode.IndexOf("textureSize =")).Split(new char[] { '(', ')' })[1].Split(',');
-			mapGlow.Initialize(TextureMinFilter.Linear, TextureMinFilter.Linear, int.Parse(textureSize[0]), int.Parse(textureSize[1]), new Shader("resources/graphics/T1N0C1S0_vert.c", "resources/MDLX/MAPGLOW_input_frag.c"), new Shader("resources/graphics/T1N0C1S0_vert.c", "resources/MDLX/MAPGLOW_output_frag.c"));
+			mapGlow.Initialize(TextureMinFilter.Linear, TextureMinFilter.Linear, int.Parse(textureSize[0]), int.Parse(textureSize[1]), new Shader("resources/graphics/T1N0C1S1_vert.c", "resources/MDLX/MAPGLOW_input_frag.c"), new Shader("resources/graphics/T1N0C1S1_vert.c", "resources/MDLX/MAPGLOW_output_frag.c"));
 			glControl1.RenderLayers.Add("map_glow", mapGlow);
 			
 			multipleRenders_CheckedChanged(null, null);
-
 		}
 
 
@@ -371,6 +430,7 @@ namespace BDxGraphiK
 			fog.Visible = checkBox2.Checked;
 			mapAlphaGlow.Visible = checkBox2.Checked;
 			multipleRenders.Visible = checkBox2.Checked;
+			interframeInterpolate.Visible = checkBox2.Checked;
 		}
 
 		private void multipleRenders_CheckedChanged(object sender, EventArgs e)
@@ -391,6 +451,13 @@ namespace BDxGraphiK
 				glControl1.Dock = DockStyle.Fill;
 			}
 
+		}
+
+		private void interframeInterpolate_CheckedChanged(object sender, EventArgs e)
+		{
+			if (stream == null)
+				return;
+			stream.WriteInt32(0x00349E1C, interframeInterpolate.Checked ? 0 : 1);
 		}
 	}
 }

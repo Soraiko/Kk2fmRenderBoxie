@@ -90,6 +90,12 @@ void main()
 				}
 			}
 		}
+		f_skinned = 1.0;
+	}
+	else
+	{
+		influenced_position = position_v4;
+		f_skinned = 0.0;
 	}
 	
     gl_Position =  gl_ProjectionMatrix * gl_ModelViewMatrix *  influenced_position;
@@ -97,5 +103,4 @@ void main()
 	f_texcoord = v_texcoord;
 	f_color = v_color;
 	f_alphatest = alphatest;
-	f_skinned = 1.0;
 }

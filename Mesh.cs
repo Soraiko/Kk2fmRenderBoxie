@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static BDxGraphiK.Mesh;
 using System.Collections;
+using System.Text.RegularExpressions;
 
 namespace BDxGraphiK
 {
@@ -212,6 +213,7 @@ namespace BDxGraphiK
 		}
 
 		public Vector4 Sphere;
+		public float Area;
 
 		public new void GenerateBinary()
 		{
@@ -382,6 +384,50 @@ namespace BDxGraphiK
 					this.StreamRW.BaseStream.Position += 4;
 					this.StreamRW.BaseStream.Position += this.Indices.Length * 2;
 				}
+
+				if (true)
+				{
+					int tipCounts = 3;
+					if (this.PrimitiveType == OpenTK.Graphics.OpenGL.PrimitiveType.Quads)
+						tipCounts = 4;
+
+					for (int i = 0; i < this.Indices.Length; i++)
+					{
+						if (i > 0 && (i % tipCounts) == 0)
+						{
+							int ind0 = this.Indices[i - tipCounts];
+							int ind1 = this.Indices[i - tipCounts + 1];
+							int ind2 = this.Indices[i - tipCounts + 2];
+
+
+							float x0_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind0 + positionsOffset + 0);
+							float y0_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind0 + positionsOffset + 4);
+							float z0_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind0 + positionsOffset + 8);
+
+							float x1_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind1 + positionsOffset + 0);
+							float y1_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind1 + positionsOffset + 4);
+							float z1_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind1 + positionsOffset + 8);
+
+							float x2_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind2 + positionsOffset + 0);
+							float y2_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind2 + positionsOffset + 4);
+							float z2_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind2 + positionsOffset + 8);
+
+							if (tipCounts == 3)
+								this.Area += CalculateTriangleArea(x0_, y0_, z0_, x1_, y1_, z1_, x2_, y2_, z2_);
+							else
+							{
+								int ind3 = this.Indices[i - tipCounts + 3];
+
+								float x3_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind3 + positionsOffset + 0);
+								float y3_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind3 + positionsOffset + 4);
+								float z3_ = System.BitConverter.ToSingle(this.VertexBinary, vertexStride * ind3 + positionsOffset + 8);
+
+								this.Area += CalculateTriangleArea(x0_, y0_, z0_, x1_, y1_, z1_, x2_, y2_, z2_);
+								this.Area += CalculateTriangleArea(x0_, y0_, z0_, x2_, y2_, z2_, x3_, y3_, z3_);
+							}
+						}
+					}
+				}
 			}
 
 
@@ -470,6 +516,24 @@ namespace BDxGraphiK
 		public Dictionary<string, int> QueryUniforms = new Dictionary<string, int>(0);
 		public List<object> QueryUniformsArrays = new List<object>(0);
 
+		//public static float CalculateTriangleArea(Assimp.Vector3D pointA, Assimp.Vector3D pointB, Assimp.Vector3D pointC)
+		public static float CalculateTriangleArea(
+			float ax, float ay, float az,
+			float bx, float by, float bz,
+			float cx, float cy, float cz)
+		{
+			Vector3 a = new Vector3(ax, ay, az);
+			Vector3 b = new Vector3(bx, by, bz);
+			Vector3 c = new Vector3(cx, cy, cz);
+
+			float sideA = Vector3.Distance(a, b);
+			float sideB = Vector3.Distance(b, c);
+			float sideC = Vector3.Distance(c, a);
+			float semiPerimeter = (sideA + sideB + sideC) / 2;
+
+			return (float)Math.Sqrt(semiPerimeter * (semiPerimeter - sideA) * (semiPerimeter - sideB) * (semiPerimeter - sideC));
+		}
+
 		public void Draw(Object3D object3D, int handle)
 		{
 			if (this.shader == null)
@@ -480,7 +544,6 @@ namespace BDxGraphiK
 				this.shader.Use(object3D.TextureMaterials[this.MaterialIndex], handle);
 
 				Query(this.QueryUniforms, this.QueryUniformsArrays, handle);
-
 
 				GL.BindVertexArray(VertexArrayObject);
 				if (IndexBufferObject > 0)

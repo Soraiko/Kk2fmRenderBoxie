@@ -302,11 +302,16 @@ namespace BDxGraphiK
 							(int)Mesh.Shader.FogMode.None : (int)Mesh.Shader.FogMode.XYZ;
 					}
 				}
-				currentModel.QueryUniforms.Add("glow_mesh", -1);
-				currentModel.QueryUniformsArrays.Add(mdlx.models[i].Name == "MAP");
+				/*currentModel.QueryUniforms.Add("glow_mesh", -1);
+				currentModel.QueryUniformsArrays.Add(mdlx.models[i].Name == "MAP");*/
 
 				currentModel.GenerateBinary();
 				currentModel.BufferBinary();
+				foreach (Mesh m in currentModel.Meshes)
+				{
+					m.QueryUniforms.Add("glow_mesh", -1);
+					m.QueryUniformsArrays.Add(mdlx.models[i].Name == "MAP" && m.Area < 400000);
+				}
 			}
 			
 
@@ -350,7 +355,7 @@ namespace BDxGraphiK
 
 
 
-		public static void DrawMap(MDLX map, bool fogEnabled, GLControl sender)
+		public static void DrawMap(MDLX map, bool showMap, bool fogEnabled, GLControl sender)
 		{
 			if (fogEnabled && map.Variables.ContainsKey("BackColor"))
 			{
@@ -371,26 +376,28 @@ namespace BDxGraphiK
 				sender.FogMax = 100f;
 			}
 
-			
-			if (map.Models.ContainsKey("SK0"))
+			if (showMap)
 			{
-				var sk0s = map.Models["SK0"];
-				foreach (Object3D obj in sk0s)
-					obj.Draw(false);
-			}
-			
-			if (map.Models.ContainsKey("SK1"))
-			{
-				var sk1s = map.Models["SK1"];
-				foreach (Object3D obj in sk1s)
-					obj.Draw(false);
-			}
+				if (map.Models.ContainsKey("SK0"))
+				{
+					var sk0s = map.Models["SK0"];
+					foreach (Object3D obj in sk0s)
+						obj.Draw(false);
+				}
 
-			if (map.Models.ContainsKey("MAP"))
-			{
-				var maps = map.Models["MAP"];
-				foreach (Object3D obj in maps)
-					obj.Draw(false);
+				if (map.Models.ContainsKey("SK1"))
+				{
+					var sk1s = map.Models["SK1"];
+					foreach (Object3D obj in sk1s)
+						obj.Draw(false);
+				}
+
+				if (map.Models.ContainsKey("MAP"))
+				{
+					var maps = map.Models["MAP"];
+					foreach (Object3D obj in maps)
+						obj.Draw(false);
+				}
 			}
 		}
 
@@ -516,6 +523,7 @@ namespace BDxGraphiK
 				Vector3 worldPos = new Vector3(System.BitConverter.ToSingle(this.MemRegionData, 0x540), System.BitConverter.ToSingle(this.MemRegionData, 0x544), System.BitConverter.ToSingle(this.MemRegionData, 0x548));
 
 				Matrix4[] matrices = new Matrix4[this.BonesCount];
+
 				Marshal.Copy(this.MemRegionData, this.MatrixBufferAddress-this.MemoryRegionAddress + this.BonesCount * 0x40, Marshal.UnsafeAddrOfPinnedArrayElement(matrices, 0), this.BonesCount * 0x40);
 				
 
@@ -574,12 +582,6 @@ namespace BDxGraphiK
 					int[] modelsMemRegionsArray = Program.glForm.modelsMemRegions.ToArray();
 					MDLX.RAM_Model[] modelsArray = Program.glForm.models.ToArray();
 
-					if (ANBOffset == 0)
-						opacity = 0;
-					
-					if ((this.MemRegionData[0x10D] & 0b10) > 0)
-						opacity = 0;
-
 					//return (this.ProcessStream.ReadByte(this.MemoryRegionAddress + 0x10d) & 0b01) == 0;
 
 					for (int i = 0; i < modelsMemRegionsArray.Length; i++)
@@ -600,9 +602,21 @@ namespace BDxGraphiK
 									//model.Skeleton.Transform = model_.Model.Models.ElementAt(0).Value[0].Skeleton.Joints[attachBone].ComputedTransform;
 									this.Transform = model_.Matrices[attachBone] * model_.Transform;
 								}
+								opacity *= model_.ColorMultiplicator.W;
 							}
 							break;
 						}
+					}
+					if (ANBOffset == 0)
+					{
+						opacity = 0;
+						this.Transform = Matrix4.CreateScale(0f);
+					}
+
+					if ((this.MemRegionData[0x10D] & 0b10) > 0)
+					{
+						opacity = 0;
+						this.Transform = Matrix4.CreateScale(0f);
 					}
 				}
 
@@ -627,6 +641,7 @@ namespace BDxGraphiK
 
 			public Matrix4[] Matrices;
 			public Matrix4 Transform;
+			public int lastANBForInterpolate;
 
 
 			public static bool UpdateModel(RAM_Model modelRamModel, bool mapDiffuseRegions, bool meshSkipRenders)
@@ -670,7 +685,7 @@ namespace BDxGraphiK
 							var keypair = model.QueryUniforms.ElementAt(qu);
 							if (keypair.Key == "colormultiplicator")
 							{
-								model.QueryUniformsArrays[qu] = mapDiffuseRegions ? modelRamModel.ColorMultiplicator : Vector4.One;
+								model.QueryUniformsArrays[qu] = mapDiffuseRegions ? modelRamModel.ColorMultiplicator : new Vector4(Vector3.One, modelRamModel.ColorMultiplicator.W);
 							}
 						}
 						break;
@@ -680,7 +695,7 @@ namespace BDxGraphiK
 				return false;
 			}
 
-			public static void DrawModel(RAM_Model ramModel, GLControl sender, bool interframeInterpolate)
+			public static void DrawModel(RAM_Model ramModel, GLControl sender, bool interframeInterpolate, bool transformModels)
 			{
 				for (int i=0;i< ramModel.Model.Models.Count;i++)
 				{
@@ -691,34 +706,44 @@ namespace BDxGraphiK
 						{
 							for (int m=0;m< ramModel.BonesCount;m++)
 							{
-								if (interframeInterpolate)
+								if (transformModels)
 								{
-									Matrix4 a = model.Skeleton.Joints[m].ComputedTransform;
-									Matrix4 b = (ramModel.Matrices[m] * ramModel.Transform);
+									if (ramModel.lastANBForInterpolate == ramModel.ANBOffset && interframeInterpolate)
+									{
+										Matrix4 a = model.Skeleton.Joints[m].ComputedTransform;
+										Matrix4 b = (ramModel.Matrices[m] * ramModel.Transform);
 
-									Vector3 scale_a = a.ExtractScale();
-									Vector3 scale_b = b.ExtractScale();
+										Vector3 scale_a = a.ExtractScale();
+										Vector3 scale_b = b.ExtractScale();
 
-									OpenTK.Quaternion rotate_a = a.ExtractRotation();
-									OpenTK.Quaternion rotate_b = b.ExtractRotation();
+										OpenTK.Quaternion rotate_a = a.ExtractRotation();
+										OpenTK.Quaternion rotate_b = b.ExtractRotation();
 
-									Vector3 translate_a = a.ExtractTranslation();
-									Vector3 translate_b = b.ExtractTranslation();
+										Vector3 translate_a = a.ExtractTranslation();
+										Vector3 translate_b = b.ExtractTranslation();
 
 
-									model.Skeleton.Joints[m].ComputedTransform =
-										Matrix4.CreateScale(scale_a * 0.5f + scale_b * 0.5f) *
-										Matrix4.CreateFromQuaternion(OpenTK.Quaternion.Slerp(rotate_a, rotate_b, 0.5f)) *
-										Matrix4.CreateTranslation(translate_a * 0.5f + translate_b * 0.5f);
+										model.Skeleton.Joints[m].ComputedTransform =
+											Matrix4.CreateScale(scale_b) *
+											Matrix4.CreateFromQuaternion(OpenTK.Quaternion.Slerp(rotate_a, rotate_b, 0.5f)) *
+											Matrix4.CreateTranslation(translate_b);
+
+
+									}
+									else
+									{
+										model.Skeleton.Joints[m].ComputedTransform = (ramModel.Matrices[m] * ramModel.Transform);
+									}
 								}
 								else
 								{
-									model.Skeleton.Joints[m].ComputedTransform = (ramModel.Matrices[m] * ramModel.Transform);
+									model.Skeleton.Joints[m].ComputedTransform = (model.Skeleton.InitialTransforms[m] * ramModel.Transform);
 								}
 							}
 
 							model.Skeleton.PassComputedTransforms();
 							model.Skeleton.SendMatricesToUniformObject();
+							ramModel.lastANBForInterpolate = ramModel.ANBOffset;
 						}
 						model.Draw(false);
 						break;
@@ -726,7 +751,7 @@ namespace BDxGraphiK
 				}
 			}
 
-			public static void DrawMap(RAM_Model mapRamModel, GLControl sender, bool fogEnabled, CheckState frustrumCullingEnabled, Frustrum frustrum)
+			public static void DrawMap(RAM_Model mapRamModel, GLControl sender, bool showMap, bool fogEnabled, CheckState frustrumCullingEnabled, Frustrum frustrum)
 			{
 				if (mapRamModel !=null)
 				{
@@ -786,7 +811,7 @@ namespace BDxGraphiK
 							}
 						}
 					}
-					MDLX.DrawMap(mapRamModel.Model, fogEnabled, sender);
+					MDLX.DrawMap(mapRamModel.Model, showMap, fogEnabled, sender);
 				}
 			}
 

@@ -479,6 +479,7 @@ namespace BDxGraphiK
 			glControl.RenderFrame(glControl, null);
 			glControl.RenderStep++;
 
+			//SetAlphaStep(5f);
 			GL.ClearColor(0,0,0,1);
 
 			for (int r = 0; r < glControl.RenderLayers.Count; r++)
