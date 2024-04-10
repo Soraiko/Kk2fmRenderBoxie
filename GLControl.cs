@@ -64,8 +64,8 @@ namespace BDxGraphiK
 			}
 
 
-			Mesh.Shader inputShader;
-			Mesh.Shader outputShader;
+			public Mesh.Shader inputShader;
+			public Mesh.Shader outputShader;
 
 			const int BORDER_PIXELS = 10;
 
@@ -128,8 +128,11 @@ namespace BDxGraphiK
 				}
 			}
 
+			public Color BackgroundColor;
+
 			public void BindBuffer()
 			{
+				GL.ClearColor(BackgroundColor);
 				GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
 				GL.Viewport(BORDER_PIXELS, BORDER_PIXELS, framebufferWidth-(BORDER_PIXELS*2), framebufferHeight- (BORDER_PIXELS * 2));
 				GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
@@ -147,6 +150,8 @@ namespace BDxGraphiK
 			{
 				AbsoluteShader = this.outputShader.Handle;
 				Matrix4 orhto = Matrix4.CreateOrthographic(1- (BORDER_PIXELS*2) / (float)framebufferWidth, 1- (BORDER_PIXELS*2) / (float)framebufferHeight, 0.1f, 10f);
+				
+				
 
 				GL.MatrixMode(MatrixMode.Projection);
 				GL.LoadMatrix(ref orhto);

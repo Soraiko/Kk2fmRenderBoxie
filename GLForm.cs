@@ -25,6 +25,7 @@ using static BDxGraphiK.Mesh;
 using static System.Net.WebRequestMethods;
 using static BDxGraphiK.MDLX;
 using System.Runtime.Remoting.Messaging;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 
 /*
@@ -130,9 +131,7 @@ namespace BDxGraphiK
 				}
 				else
 				{
-
 					/* Updating MAP & Camera */
-
 					glControl1.RenderLayers["map_glow"].Enabled = mapAlphaGlow.Checked;
 					SmoothCam(2f);
 
@@ -140,7 +139,6 @@ namespace BDxGraphiK
 					while (stream.ReadInt32(MDLX.RAM_Model.GRAPHICS_ACTIVITY_PTR) == 1 && awaitingModelsMemRegions.Count > 0)
 					{
 						int memRegion = awaitingModelsMemRegions[0];
-						awaitingModelsMemRegions.RemoveAt(0);
 
 						MDLX.RAM_Model newModel = new MDLX.RAM_Model(stream, memRegion);
 						if (newModel.Aborted)
@@ -153,6 +151,7 @@ namespace BDxGraphiK
 							models.Add(newModel);
 							modelsMemRegions.Add(memRegion);
 						}
+						awaitingModelsMemRegions.RemoveAt(0);
 					}
 
 					if (showModels.Checked)
@@ -162,7 +161,7 @@ namespace BDxGraphiK
 
 						for (int i = 0; i < modelsArray.Length; i++)
 						{
-							if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked) == false)
+							if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked, transformModels.Checked, texturePatches.Checked) == false)
 							{
 								modelsMemRegions.RemoveAt(models.IndexOf(modelsArray[i]));
 								models.RemoveAt(models.IndexOf(modelsArray[i]));
@@ -183,11 +182,12 @@ namespace BDxGraphiK
 
 			if (stp.ElapsedMilliseconds > lastSecond + 1000)
 			{
-				this.Text = ((totalTicks - lastTick) / 5f) +"FPS";
+				this.Text = "KH2FM Cutscene Renderboxie (Soraiko) " + ((totalTicks - lastTick) / (Program.glForm.alphaSorting.Checked ? 5f:3f)) +"FPS";
 				lastTick = totalTicks;
 				lastSecond = stp.ElapsedMilliseconds;
 			}
 		}
+		int show_texture = -1;
 
 		public Frustrum frustrum1 = new Frustrum();
 		private unsafe void bigViewport_RenderFrame(object sender, EventArgs e)
@@ -196,11 +196,14 @@ namespace BDxGraphiK
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref lookat);
 
-			frustrum1.CalculateFrustum();
+			if (glControl1.RenderStep == 0)
+			{
+				frustrum1.CalculateFrustum();
+				SmoothCam(2f);
+			}
 
 			RAM_Model.DrawMap(map, sender as GLControl, showMap.Checked, fog.Checked, frustumCulling.CheckState, frustrum1);
 
-			SmoothCam2(4f, glControl1.RenderStep == 0);
 
 			if (showModels.Checked)
 			{
@@ -209,6 +212,15 @@ namespace BDxGraphiK
 				{
 					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
 				}
+			}
+
+			if (glControl1.RenderStep == 0)
+			{
+				GL.UseProgram(mapGlow.outputShader.Handle);
+				if (show_texture < 0)
+					show_texture = GL.GetUniformLocation(mapGlow.outputShader.Handle, "show_glow_texture");
+				if (show_texture > -1)
+					GL.Uniform1(show_texture, mapAlphaGlow.CheckState == CheckState.Indeterminate ? 1f : 2f);
 			}
 			totalTicks++;
 		}
@@ -259,56 +271,43 @@ namespace BDxGraphiK
 
 		public void SmoothCam(float step)
 		{
-			return;
-			if (stream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) == 0)
-				step = 1f;
-
-			int position = 0x003A7FC0;
-			int lookAt = 0x003A7FD0;
-
-			Vector3 camPosition = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
-			Vector3 camLookAt = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
-
-
-			cameraPosition += (camPosition - cameraPosition) / step;
-			cameraLookAt += (camLookAt - cameraLookAt) / step;
-		}
-
-
-
-
-		public void SmoothCam2(float step, bool update)
-		{
 			if (stream == null)
 				return;
-
 			if (stream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) == 0)
 				step = 1f;
 
 			int position = 0x003A7FC0;
 			int lookAt = 0x003A7FD0;
 
+			int position2 = 0x21D9E7F0;
+			int lookAt2 = 0x21D9E800;
+
+
 			Vector3 camPosition = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
 			Vector3 camLookAt = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
 
+			Vector3 camPosition2 = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
+			Vector3 camLookAt2 = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
 
-			if (update)
+			if (Vector3.Distance(camPosition, camPosition2) <0.001&&
+				Vector3.Distance(camLookAt, camLookAt2) < 0.001)
 			{
 				cameraPosition += (camPosition - cameraPosition) / step;
 				cameraLookAt += (camLookAt - cameraLookAt) / step;
 			}
 		}
 
-
 		System.Threading.Thread objentryThread = null;
 		List<Object3D> objects3D = new List<Object3D>(0);
+
 
 		private void GLForm_Load(object sender, EventArgs e)
 		{
 			stp.Start();
 			GL.Enable(EnableCap.DepthTest);
-			
 			GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+			GL.Disable(EnableCap.PolygonOffsetFill);
 
 
 			GL.Enable(EnableCap.CullFace);
@@ -340,14 +339,25 @@ namespace BDxGraphiK
 				GLControl.ShaderPrograms.Add(shader.Handle);
 			}
 
-			GLControl.RenderLayer mapGlow = new GLControl.RenderLayer();
+			
+			mapGlow = new GLControl.RenderLayer();
+			mapGlow.BackgroundColor = Color.FromArgb(255, 0, 0, 0);
 			string sourceCcode = System.IO.File.ReadAllText("resources/MDLX/MAPGLOW_output_frag.c");
 			string[] textureSize = sourceCcode.Substring(sourceCcode.IndexOf("textureSize =")).Split(new char[] { '(', ')' })[1].Split(',');
 			mapGlow.Initialize(TextureMinFilter.Linear, TextureMinFilter.Linear, int.Parse(textureSize[0]), int.Parse(textureSize[1]), new Shader("resources/graphics/T1N0C1S1_vert.c", "resources/MDLX/MAPGLOW_input_frag.c"), new Shader("resources/graphics/T1N0C1S1_vert.c", "resources/MDLX/MAPGLOW_output_frag.c"));
 			glControl1.RenderLayers.Add("map_glow", mapGlow);
-			
+
+			/*GLControl.RenderLayer transparentModels = new GLControl.RenderLayer();
+			transparentModels.BackgroundColor = Color.FromArgb(255, 255,255, 255);
+			sourceCcode = System.IO.File.ReadAllText("resources/MDLX/TRANSPARENT_MODELS_output_frag.c");
+			textureSize = sourceCcode.Substring(sourceCcode.IndexOf("textureSize =")).Split(new char[] { '(', ')' })[1].Split(',');
+			transparentModels.Initialize(TextureMinFilter.Linear, TextureMinFilter.Linear, int.Parse(textureSize[0]), int.Parse(textureSize[1]), new Shader("resources/graphics/T1N0C1S1_vert.c", "resources/MDLX/TRANSPARENT_MODELS_input_frag.c"), new Shader("resources/graphics/T1N0C1S1_vert.c", "resources/MDLX/TRANSPARENT_MODELS_output_frag.c"));
+			glControl1.RenderLayers.Add("transparent_models", transparentModels);
+			transparentModels.Enabled = true;*/
+
 			multipleRenders_CheckedChanged(null, null);
 		}
+		GLControl.RenderLayer mapGlow;
 
 
 		public List<int> modelsMemRegions = new List<int>(0);

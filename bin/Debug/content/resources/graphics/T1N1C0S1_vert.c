@@ -21,6 +21,8 @@ layout(std140) uniform transform_data
   mat4 matrices[1024];
 };
 uniform float alphatest;
+uniform vec4 colormultiplicator;
+out vec4 f_colormultiplicator;
 
 void main()
 {
@@ -105,4 +107,5 @@ void main()
 	f_texcoord = v_texcoord;
 	f_normal = (influenced_normal.xyz - influenced_position.xyz)/100.0;
 	f_alphatest = alphatest;
+f_colormultiplicator = colormultiplicator;
 }

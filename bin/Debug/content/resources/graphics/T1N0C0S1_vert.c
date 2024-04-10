@@ -20,6 +20,8 @@ layout(std140) uniform transform_data
   mat4 matrices[1024];
 };
 uniform float alphatest;
+uniform vec4 colormultiplicator;
+out vec4 f_colormultiplicator;
 
 
 void main()
@@ -88,11 +90,17 @@ void main()
 				}
 			}
 		}
+		f_skinned = 1.0;
+	}
+	else
+	{
+		influenced_position = position_v4;
+		f_skinned = 0.0;
 	}
 	
     gl_Position =  gl_ProjectionMatrix * gl_ModelViewMatrix *  influenced_position;
 	f_position = influenced_position.xyz;
 	f_texcoord = v_texcoord;
 	f_alphatest = alphatest;
-	f_skinned = 1.0;
+f_colormultiplicator = colormultiplicator;
 }

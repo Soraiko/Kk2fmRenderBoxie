@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using static BDxGraphiK.Mesh;
 using System.Collections;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 namespace BDxGraphiK
 {
@@ -74,12 +75,12 @@ namespace BDxGraphiK
 				GL.CompileShader(VertexShader);
 				string infoLogVert = GL.GetShaderInfoLog(VertexShader);
 				if (infoLogVert != System.String.Empty)
-					System.Console.WriteLine(infoLogVert);
+					System.Console.WriteLine(vertexPath+ "\r\n"+ infoLogVert);
 
 				GL.CompileShader(FragmentShader);
 				string infoLogFrag = GL.GetShaderInfoLog(FragmentShader);
 				if (infoLogFrag != System.String.Empty)
-					System.Console.WriteLine(infoLogFrag);
+					System.Console.WriteLine(fragmentPath+ "\r\n"+ infoLogFrag);
 
 				Handle = GL.CreateProgram();
 
@@ -96,6 +97,7 @@ namespace BDxGraphiK
 			}
 
 			int bump_mapping = -1;
+			int[] patches = new int[] {-1,-1,-1,-1};
 
 			public void Use(TextureMaterial material, int handle)
 			{
@@ -114,6 +116,23 @@ namespace BDxGraphiK
 				GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, texture.TextureWrapS);
 				GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, texture.TextureWrapT);
 				GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, texture.TextureMinFilter);
+
+				for (int p=0;p<material.TexturePatches.Length;p++)
+				{
+					texture = material.TexturePatches[p];
+					GL.ActiveTexture((TextureUnit)((int)TextureUnit.Texture2+p));
+					GL.BindTexture(TextureTarget.Texture2D, texture.Integer);
+
+					if (patches[p] < 0)
+						patches[p] = GL.GetUniformLocation(handle, "patch"+p);
+					if (patches[p] > -1)
+					{
+						GL.Uniform1(patches[p], 2+p);
+						GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, texture.TextureWrapS);
+						GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, texture.TextureWrapT);
+						GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, texture.TextureMinFilter);
+					}
+				}
 
 				if (handle == this.Handle)
 				{
@@ -498,8 +517,15 @@ namespace BDxGraphiK
 			{
 				var el = QueryUniforms.ElementAt(i);
 				int val = el.Value;
+				if (handle == GLControl.AbsoluteShader)
+				{
+					val = GL.GetUniformLocation(handle, el.Key);
+				}
+				else
 				if (val < 0)
+				{
 					QueryUniforms[el.Key] = GL.GetUniformLocation(handle, el.Key);
+				}
 				if (val > -1)
 				{
 					if (QueryUniformsArrays[i] is bool)
@@ -508,6 +534,10 @@ namespace BDxGraphiK
 						GL.Uniform1(val, (int)QueryUniformsArrays[i]);
 					else if (QueryUniformsArrays[i] is Vector4)
 						GL.Uniform4(val, (Vector4)QueryUniformsArrays[i]);
+					else if (QueryUniformsArrays[i] is Vector2)
+						GL.Uniform2(val, (Vector2)QueryUniformsArrays[i]);
+					else if (QueryUniformsArrays[i] is float)
+						GL.Uniform1(val, (float)QueryUniformsArrays[i]);
 				}
 
 			}

@@ -10,6 +10,8 @@ out vec3 f_normal;
 out vec4 f_color;
 out float f_alphatest;
 uniform float alphatest;
+uniform vec4 colormultiplicator;
+out vec4 f_colormultiplicator;
 
 void main()
 {
@@ -19,4 +21,5 @@ void main()
 	f_normal = v_normal;
 	f_color = v_color;
 	f_alphatest = alphatest;
+f_colormultiplicator = colormultiplicator;
 }

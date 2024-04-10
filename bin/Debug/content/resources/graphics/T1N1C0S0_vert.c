@@ -6,6 +6,8 @@ layout (location = 2) in vec3 v_normal;
 out vec3 f_position;
 out vec2 f_texcoord;
 out vec3 f_normal;
+uniform vec4 colormultiplicator;
+out vec4 f_colormultiplicator;
 
 void main()
 {
@@ -13,4 +15,5 @@ void main()
 	f_position = v_position;
 	f_texcoord = v_texcoord;
 	f_normal = v_normal;
+f_colormultiplicator = colormultiplicator;
 }

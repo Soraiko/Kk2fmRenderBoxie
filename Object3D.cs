@@ -2,6 +2,7 @@
 using Assimp;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
+using SrkAlternatives;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -46,14 +47,35 @@ namespace BDxGraphiK
 
 			for (int i = 0; i < this.TextureMaterials.Count; i++)
 			{
+				TextureMaterial tm = this.TextureMaterials[i];
 				for (int j = 0; j < TextureMaterial.COUNT; j++)
 				{
-					if (TextureMaterials[i].Textures[j].Integer > 0)
+					if (tm.Textures[j].Integer > 0)
 					{
+						Texture t = tm.Textures[j];
 						this.StreamRW.BinaryWriter.Write(j);
-						byte[] nameBytes = Encoding.Unicode.GetBytes(TextureMaterials[i].Textures[j].Filename);
+						byte[] nameBytes = Encoding.Unicode.GetBytes(t.Filename);
 						this.StreamRW.BinaryWriter.Write((byte)nameBytes.Length);
 						this.StreamRW.BinaryWriter.Write(nameBytes);
+					}
+				}
+				if (tm.TexturePatches.Length>0)
+				{
+					this.StreamRW.BinaryWriter.Write(-2);
+					this.StreamRW.BinaryWriter.Write(tm.TexturePatches.Length);
+
+					for (int j = 0; j < tm.TexturePatches.Length; j++)
+					{
+						Texture tp = tm.TexturePatches[j];
+						byte[] nameBytes = Encoding.Unicode.GetBytes(tp.Filename);
+						this.StreamRW.BinaryWriter.Write((byte)nameBytes.Length);
+						this.StreamRW.BinaryWriter.Write(nameBytes);
+						this.StreamRW.BinaryWriter.Write(tp.X);
+						this.StreamRW.BinaryWriter.Write(tp.Y);
+						this.StreamRW.BinaryWriter.Write(tp.Width);
+						this.StreamRW.BinaryWriter.Write(tp.Height);
+						this.StreamRW.BinaryWriter.Write(tp.Count);
+						this.StreamRW.BinaryWriter.Write((int)tp.Orientation);
 					}
 				}
 				this.StreamRW.BinaryWriter.Write(-1);
@@ -82,9 +104,10 @@ namespace BDxGraphiK
 			object3D.Variables = this.Variables;
 			object3D.StreamRW = this.StreamRW;
 			object3D.StreamRW.BaseStream.Position = 0;
+			object3D.BufferBinary();
+			/* On défini les uniforms après pour ne pas écraser ceux des modèles préchargés dans la RAM (MDLX non exportés en binaires) */
 			object3D.QueryUniforms = this.QueryUniforms;
 			object3D.QueryUniformsArrays = this.QueryUniformsArrays;
-			object3D.BufferBinary();
 			for (int m = 0; m < this.Meshes.Count; m++)
 			{
 				object3D.Meshes[m].QueryUniforms = this.Meshes[m].QueryUniforms;
@@ -101,6 +124,7 @@ namespace BDxGraphiK
 
 			int meshCount = 0;
 			List<int> meshIndices = new List<int>(0);
+			bool hasTexturePatches = false;
 
 			if (this.Generated)
 			{
@@ -118,7 +142,22 @@ namespace BDxGraphiK
 							this.StreamRW.BaseStream.Position += Encoding.Unicode.GetByteCount(this.TextureMaterials[i].Textures[j].Filename); /* skip texture filename count */
 						}
 					}
-					this.StreamRW.BaseStream.Position += 4; /* skip stop flags */
+					if (this.StreamRW.BinaryReader.ReadInt32() == -2)
+					{
+						int count = this.StreamRW.BinaryReader.ReadInt32();
+						for (int j = 0; j < count; j++)
+						{
+							this.StreamRW.BaseStream.Position += 1; /* skip texture filename count byte */
+							this.StreamRW.BaseStream.Position += Encoding.Unicode.GetByteCount(this.TextureMaterials[i].TexturePatches[j].Filename); /* skip texture filename count */
+							this.StreamRW.BaseStream.Position += 4;  /* skip texture patch x property */
+							this.StreamRW.BaseStream.Position += 4;  /* skip texture patch y property */
+							this.StreamRW.BaseStream.Position += 4;  /* skip texture patch width property */
+							this.StreamRW.BaseStream.Position += 4;  /* skip texture patch height property */
+							this.StreamRW.BaseStream.Position += 4;  /* skip texture patch count property */
+							this.StreamRW.BaseStream.Position += 4;  /* skip texture patch orientation property */
+						}
+						this.StreamRW.BaseStream.Position += 4;
+					}
 				}
 			}
 			else
@@ -134,6 +173,26 @@ namespace BDxGraphiK
 					while (true)
 					{
 						int textureType = this.StreamRW.BinaryReader.ReadInt32();
+						if (textureType == -2) /* Texture Patches */
+						{
+							List<Texture> patches = new List<Texture>(0);
+							int patchesCount = this.StreamRW.BinaryReader.ReadInt32();
+
+							for (int i=0;i< patchesCount;i++)
+							{
+								byte filenameLength = this.StreamRW.BinaryReader.ReadByte();
+								Texture patch = Texture.LoadTexture(Encoding.Unicode.GetString(this.StreamRW.BinaryReader.ReadBytes(filenameLength)), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, true);
+								patch.X = this.StreamRW.BinaryReader.ReadInt32();
+								patch.Y = this.StreamRW.BinaryReader.ReadInt32();
+								patch.Width = this.StreamRW.BinaryReader.ReadInt32();
+								patch.Height = this.StreamRW.BinaryReader.ReadInt32();
+								patch.Count = this.StreamRW.BinaryReader.ReadInt32();
+								patch.Orientation = (Texture.PatchOrientation)this.StreamRW.BinaryReader.ReadInt32();
+								patches.Add(patch);
+							}
+							textureMaterial.TexturePatches = patches.ToArray();
+						}
+						else
 						if (textureType == -1)
 						{
 							break;
@@ -141,10 +200,28 @@ namespace BDxGraphiK
 						else
 						{
 							byte filenameLength = this.StreamRW.BinaryReader.ReadByte();
-							textureMaterial.Textures[textureType] = Texture.LoadTexture(Encoding.Unicode.GetString(this.StreamRW.BinaryReader.ReadBytes(filenameLength)), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat);
+							textureMaterial.Textures[textureType] = Texture.LoadTexture(Encoding.Unicode.GetString(this.StreamRW.BinaryReader.ReadBytes(filenameLength)), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, true);
 						}
 					}
 					this.TextureMaterials.Add(textureMaterial);
+				}
+			}
+
+			for (int i = 0; i < this.TextureMaterials.Count; i++)
+			{
+				if (this.TextureMaterials[i].TexturePatches.Length > 0)
+				{
+					hasTexturePatches = true;
+					break;
+				}
+			}
+
+			for (int qu = 0; qu < this.QueryUniforms.Count; qu++)
+			{
+				var keypair = this.QueryUniforms.ElementAt(qu);
+				if (keypair.Key == "has_patch")
+				{
+					this.QueryUniformsArrays[qu] = hasTexturePatches;
 				}
 			}
 
@@ -166,19 +243,56 @@ namespace BDxGraphiK
 						}
 							break;
 					case BinableObject.ASCII4.Mesh:
+						Mesh mesh = null;
+
 						if (this.Generated)
 						{
-							this.Meshes[meshCount].BufferBinary(this.StreamRW.BaseStream.Position);
+							mesh = this.Meshes[meshCount];
+							mesh.BufferBinary(this.StreamRW.BaseStream.Position);
 							meshCount++;
 						}
 						else
 						{
-							Mesh mesh = new Mesh(this);
+							mesh = new Mesh(this);
 							mesh.StreamRW = this.StreamRW;
 							mesh.BufferBinary(this.StreamRW.BaseStream.Position);
 							mesh.MaterialIndex = meshIndices[meshCount];
 							meshCount++;
 							this.AddMesh(mesh);
+						}
+
+						if (hasTexturePatches)
+						{
+							Texture t = this.TextureMaterials[mesh.MaterialIndex].Textures[0];
+							Texture[] pts = this.TextureMaterials[mesh.MaterialIndex].TexturePatches;
+							if (pts.Length > 0)
+							{
+								mesh.QueryUniforms.Add("patch_orw_orh", -1);
+								mesh.QueryUniformsArrays.Add(new Vector2(t.Width, t.Height));
+								for (int i = 0; i < 4; i++)
+								{
+									if (i < pts.Length)
+									{
+										mesh.QueryUniforms.Add("patch" + i + "_index", -1);
+										mesh.QueryUniformsArrays.Add(-1);
+
+										mesh.QueryUniforms.Add("patch" + i + "_x_y_w_h", -1);
+										mesh.QueryUniformsArrays.Add(new Vector4(pts[i].X, pts[i].Y, pts[i].Width, pts[i].Height));
+										mesh.QueryUniforms.Add("patch" + i + "_o_c", -1);
+										mesh.QueryUniformsArrays.Add(((int)pts[i].Orientation == 0) ? -1f * pts[i].Count : 1f * pts[i].Count);
+									}
+									else
+									{
+										mesh.QueryUniforms.Add("patch" + i + "_index", -1);
+										mesh.QueryUniformsArrays.Add(-1);
+									}
+								}
+							}
+							else
+							{
+								mesh.QueryUniforms.Add("patch_orw_orh", -1);
+								mesh.QueryUniformsArrays.Add(Vector2.Zero);
+							}
 						}
 					break;
 				}
@@ -334,10 +448,10 @@ namespace BDxGraphiK
 								TextureMaterial material = new TextureMaterial(scene.Materials[mesh.MaterialIndex].Name);
 
 								if (scene.Materials[mesh.MaterialIndex].HasTextureDiffuse)
-									material.Textures[(int)TextureMaterial.TextureType.Diffuse] = Texture.LoadTexture(Texture.TestLateralPath(filename, scene.Materials[mesh.MaterialIndex].TextureDiffuse.FilePath), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat);
+									material.Textures[(int)TextureMaterial.TextureType.Diffuse] = Texture.LoadTexture(Texture.TestLateralPath(filename, scene.Materials[mesh.MaterialIndex].TextureDiffuse.FilePath), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, true);
 								
 								if (scene.Materials[mesh.MaterialIndex].HasTextureHeight)
-									material.Textures[(int)TextureMaterial.TextureType.BumpMapping] = Texture.LoadTexture(Texture.TestLateralPath(filename, scene.Materials[mesh.MaterialIndex].TextureHeight.FilePath), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat);
+									material.Textures[(int)TextureMaterial.TextureType.BumpMapping] = Texture.LoadTexture(Texture.TestLateralPath(filename, scene.Materials[mesh.MaterialIndex].TextureHeight.FilePath), null, TextureMinFilter.Linear, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat, true);
 
 								materials.Add(material.Name, material);
 							}
@@ -512,14 +626,17 @@ namespace BDxGraphiK
 		public Dictionary<string, int> QueryUniforms = new Dictionary<string, int>
 		{
 			["fog_mode"] = -1,
-			["colormultiplicator"] = -1
+			["colormultiplicator"] = -1,
+			["has_patch"] = -1
 		};
 
 		public List<object> QueryUniformsArrays = new List<object>
 		{
 			(int)Mesh.Shader.FogMode.None,
-			new Vector4(1f)
+			new Vector4(1f),
+			false
 		};
+
 
 		public Texture Shadow = Texture.whitePixel1x1;
 		public Texture Draw(bool shadow)

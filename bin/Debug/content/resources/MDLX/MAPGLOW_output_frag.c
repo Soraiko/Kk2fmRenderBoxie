@@ -50,27 +50,35 @@ vec4 GIMPColorToAlpha(float pA, float p1, float p2, float p3, float r1, float r2
 }
 
 
+uniform float show_glow_texture;
+
 void main()
 {
-	vec2 textureSize = vec2(512,512);
-	
-	float blurRadius = 30.0;
-	vec3 blur = vec3(0.0);
-	const int kernelSize = 15;
-	float sigma = blurRadius / 3.0;
-	float totalWeight = 0.0;
+	if (show_glow_texture > 1f)
+	{
+		vec2 textureSize = vec2(512,512);
+		
+		float blurRadius = 30.0;
+		vec3 blur = vec3(0.0);
+		const int kernelSize = 15;
+		float sigma = blurRadius / 3.0;
+		float totalWeight = 0.0;
 
-	for (int x = -kernelSize; x <= kernelSize; ++x) {
-		for (int y = -kernelSize; y <= kernelSize; ++y) {
-			vec2 offset = vec2(x, y);
-			float weight = exp(-(dot(offset, offset)) / (sigma * sigma));
-			blur += texture(texture0, f_texcoord + offset / textureSize).rgb * weight;
-			totalWeight += weight;
+		for (int x = -kernelSize; x <= kernelSize; ++x) {
+			for (int y = -kernelSize; y <= kernelSize; ++y) {
+				vec2 offset = vec2(x, y);
+				float weight = exp(-(dot(offset, offset)) / (sigma * sigma));
+				blur += texture(texture0, f_texcoord + offset / textureSize).rgb * weight;
+				totalWeight += weight;
+			}
 		}
+		
+		vec4 color = vec4(blur / (totalWeight), 1.0);
+		color = GIMPColorToAlpha(color.a, color.r*255.0, color.g*255.0, color.b*255.0, 0.0,0.0,0.0);
+		gl_FragColor = color;
 	}
-
-	vec4 color = vec4(blur / (totalWeight), 1.0);
-	color = GIMPColorToAlpha(color.a, color.r*255.0, color.g*255.0, color.b*255.0, 0.0,0.0,0.0);
-	gl_FragColor = color;
-	//gl_FragColor = texture(texture0, f_texcoord);
+	else
+	{
+		gl_FragColor = texture(texture0, f_texcoord);
+	}
 }

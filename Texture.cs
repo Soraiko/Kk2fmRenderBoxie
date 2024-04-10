@@ -19,12 +19,25 @@ namespace BDxGraphiK
 		public int Width;
 		public int Height;
 
+		/* For TexturePatches */
+		public enum PatchOrientation
+		{
+			Horizontal = 0,
+			Vertical = 1
+		}
+		public int X;
+		public int Y;
+		public int Count;
+		public PatchOrientation Orientation;
+
 		public int[] TextureMinFilter;
 		public int[] TextureWrapS;
 		public int[] TextureWrapT;
 
 		public int Integer;
 		public string Filename;
+
+
 
 		public static string TestLateralPath(string ownerPath, string lateralPath)
 		{
@@ -36,12 +49,12 @@ namespace BDxGraphiK
 
 		static Texture()
 		{
-			whitePixel1x1 = Texture.LoadTexture(@"resources\whitePixel1x1.png", null, OpenTK.Graphics.OpenGL.TextureMinFilter.Nearest, TextureWrapMode.Repeat, TextureWrapMode.Repeat);
-			bumpPixel1x1 = Texture.LoadTexture(@"resources\bumpPixel1x1.png", null, OpenTK.Graphics.OpenGL.TextureMinFilter.Nearest, TextureWrapMode.Repeat, TextureWrapMode.Repeat);
+			whitePixel1x1 = Texture.LoadTexture(@"resources\whitePixel1x1.png", null, OpenTK.Graphics.OpenGL.TextureMinFilter.Nearest, TextureWrapMode.Repeat, TextureWrapMode.Repeat,true);
+			bumpPixel1x1 = Texture.LoadTexture(@"resources\bumpPixel1x1.png", null, OpenTK.Graphics.OpenGL.TextureMinFilter.Nearest, TextureWrapMode.Repeat, TextureWrapMode.Repeat, true);
 		}
 
 		
-		public static Texture LoadTexture(string filename, System.Drawing.Bitmap input_bmp, TextureMinFilter textureMinFilter, TextureWrapMode textureWrapS, TextureWrapMode textureWrapT)
+		public static Texture LoadTexture(string filename, System.Drawing.Bitmap input_bmp, TextureMinFilter textureMinFilter, TextureWrapMode textureWrapS, TextureWrapMode textureWrapT, bool disposeTexture)
 		{
 			if (Textures.ContainsKey(filename))
 			{
@@ -79,9 +92,10 @@ namespace BDxGraphiK
 
 			GL.TexImage2D(TextureTarget.Texture2D, 0, format, bmp_to_buffer.Width, bmp_to_buffer.Height, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, data.Scan0);
 			GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
-
+			
 			bmp_to_buffer.UnlockBits(data);
-			bmp_to_buffer.Dispose();
+			if (disposeTexture)
+				bmp_to_buffer.Dispose();
 
 			output.TextureMinFilter = new int[] { (int)textureMinFilter };
 			output.TextureWrapS = new int[] { (int)textureWrapS };

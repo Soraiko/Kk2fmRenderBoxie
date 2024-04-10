@@ -11,6 +11,7 @@ namespace BDxGraphiK
 		public const int COUNT = 2;
 		public readonly string Name;
 		public Texture[] Textures;
+		public Texture[] TexturePatches;
 
 		public enum TextureType
 		{
@@ -22,6 +23,7 @@ namespace BDxGraphiK
 		{
 			this.Name = name;
 			this.Textures = new Texture[COUNT];
+			this.TexturePatches = new Texture[0];
 		}
 	}
 }

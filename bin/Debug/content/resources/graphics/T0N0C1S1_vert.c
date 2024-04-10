@@ -21,6 +21,8 @@ layout(std140) uniform transform_data
 uniform float alphatest;
 
 
+uniform vec4 colormultiplicator;
+out vec4 f_colormultiplicator;
 void main()
 {
 	vec4 position_v4 = vec4(v_position, 1);
@@ -93,4 +95,5 @@ void main()
 	f_position = influenced_position.xyz;
 	f_color = v_color;
 	f_alphatest = alphatest;
+f_colormultiplicator = colormultiplicator;
 }

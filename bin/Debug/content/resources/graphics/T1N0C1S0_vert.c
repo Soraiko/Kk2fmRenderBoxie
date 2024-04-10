@@ -10,6 +10,8 @@ out float f_alphatest;
 out float f_skinned;
 
 uniform float alphatest;
+uniform vec4 colormultiplicator;
+out vec4 f_colormultiplicator;
 
 void main()
 {
@@ -19,4 +21,5 @@ void main()
 	f_color = v_color;
 	f_alphatest = alphatest;
 	f_skinned = 0.0;
+f_colormultiplicator = colormultiplicator;
 }
