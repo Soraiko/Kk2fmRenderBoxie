@@ -26,6 +26,7 @@ using static System.Net.WebRequestMethods;
 using static BDxGraphiK.MDLX;
 using System.Runtime.Remoting.Messaging;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
 
 /*
@@ -52,6 +53,8 @@ namespace BDxGraphiK
 			this.glControl1.RenderFrame += bigViewport_RenderFrame;
 			this.glControl2.RenderFrame += smallViewport_RenderFrame;
 			this.glControl3.RenderFrame += smallViewport_RenderFrame2;
+			checkBox2.Checked = false;
+			//checkBox2_CheckedChanged(null, null);
 		}
 
 		string pcsx2pName = "";
@@ -182,7 +185,7 @@ namespace BDxGraphiK
 
 			if (stp.ElapsedMilliseconds > lastSecond + 1000)
 			{
-				this.Text = "KH2FM Cutscene Renderboxie (Soraiko) " + ((totalTicks - lastTick) / (Program.glForm.alphaSorting.Checked ? 5f:3f)) +"FPS";
+				this.Text = "KH2FM Cutscene Renderboxie (Soraiko) " + ((totalTicks - lastTick) / (Program.glForm.smartBlending.Checked ? 5f:3f)) +"FPS";
 				lastTick = totalTicks;
 				lastSecond = stp.ElapsedMilliseconds;
 			}
@@ -441,6 +444,8 @@ namespace BDxGraphiK
 			mapAlphaGlow.Visible = checkBox2.Checked;
 			multipleRenders.Visible = checkBox2.Checked;
 			interframeInterpolate.Visible = checkBox2.Checked;
+			smartBlending.Visible = checkBox2.Checked;
+			texturePatches.Visible = checkBox2.Checked;
 		}
 
 		private void multipleRenders_CheckedChanged(object sender, EventArgs e)

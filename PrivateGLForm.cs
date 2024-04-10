@@ -419,7 +419,7 @@ namespace BDxGraphiK
 			SetUniforms(glControl);
 			glControl.RenderStep = 0;
 
-			if (Program.glForm.alphaSorting.Checked)
+			if (Program.glForm.smartBlending.Checked)
 			{
 				SetAlphaStep(1f);
 				GL.DepthFunc(OpenTK.Graphics.OpenGL.DepthFunction.Lequal);

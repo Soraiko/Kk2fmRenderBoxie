@@ -58,7 +58,7 @@
 			this.numericUpDown6 = new System.Windows.Forms.NumericUpDown();
 			this.interframeInterpolate = new System.Windows.Forms.CheckBox();
 			this.texturePatches = new System.Windows.Forms.CheckBox();
-			this.alphaSorting = new System.Windows.Forms.CheckBox();
+			this.smartBlending = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown4)).BeginInit();
@@ -151,9 +151,9 @@
 			this.frustumCulling.CheckState = System.Windows.Forms.CheckState.Checked;
 			this.frustumCulling.Location = new System.Drawing.Point(13, 101);
 			this.frustumCulling.Name = "frustumCulling";
-			this.frustumCulling.Size = new System.Drawing.Size(99, 17);
+			this.frustumCulling.Size = new System.Drawing.Size(243, 17);
 			this.frustumCulling.TabIndex = 8;
-			this.frustumCulling.Text = "Frustrum culling";
+			this.frustumCulling.Text = "Frustrum culling (none/cam_n_rem/remember)";
 			this.frustumCulling.ThreeState = true;
 			this.frustumCulling.UseVisualStyleBackColor = false;
 			// 
@@ -264,6 +264,7 @@
 			this.cheatEngine.TabIndex = 18;
 			this.cheatEngine.Text = "CE";
 			this.cheatEngine.UseVisualStyleBackColor = false;
+			this.cheatEngine.Visible = false;
 			// 
 			// mapAlphaGlow
 			// 
@@ -476,18 +477,18 @@
 			this.texturePatches.Text = "Texture patches";
 			this.texturePatches.UseVisualStyleBackColor = false;
 			// 
-			// alphaSorting
+			// smartBlending
 			// 
-			this.alphaSorting.AutoSize = true;
-			this.alphaSorting.BackColor = System.Drawing.Color.Transparent;
-			this.alphaSorting.Checked = true;
-			this.alphaSorting.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.alphaSorting.Location = new System.Drawing.Point(13, 307);
-			this.alphaSorting.Name = "alphaSorting";
-			this.alphaSorting.Size = new System.Drawing.Size(257, 17);
-			this.alphaSorting.TabIndex = 38;
-			this.alphaSorting.Text = "Smart blending (Experimental, more render layers)";
-			this.alphaSorting.UseVisualStyleBackColor = false;
+			this.smartBlending.AutoSize = true;
+			this.smartBlending.BackColor = System.Drawing.Color.Transparent;
+			this.smartBlending.Checked = true;
+			this.smartBlending.CheckState = System.Windows.Forms.CheckState.Checked;
+			this.smartBlending.Location = new System.Drawing.Point(13, 307);
+			this.smartBlending.Name = "smartBlending";
+			this.smartBlending.Size = new System.Drawing.Size(257, 17);
+			this.smartBlending.TabIndex = 38;
+			this.smartBlending.Text = "Smart blending (Experimental, more render layers)";
+			this.smartBlending.UseVisualStyleBackColor = false;
 			// 
 			// GLForm
 			// 
@@ -495,7 +496,7 @@
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
 			this.ClientSize = new System.Drawing.Size(1266, 675);
-			this.Controls.Add(this.alphaSorting);
+			this.Controls.Add(this.smartBlending);
 			this.Controls.Add(this.texturePatches);
 			this.Controls.Add(this.interframeInterpolate);
 			this.Controls.Add(this.label6);
@@ -574,6 +575,6 @@
 		public System.Windows.Forms.NumericUpDown numericUpDown6;
 		private System.Windows.Forms.CheckBox interframeInterpolate;
 		public System.Windows.Forms.CheckBox texturePatches;
-		public System.Windows.Forms.CheckBox alphaSorting;
+		public System.Windows.Forms.CheckBox smartBlending;
 	}
 }
