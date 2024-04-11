@@ -44,7 +44,8 @@ uniform int patch3_index;
 
 void main()
 {
-	vec4 color = texture(texture0, f_texcoord) * f_colormultiplicator;
+	vec4 originalcolor = texture(texture0, f_texcoord) * f_colormultiplicator;
+	vec4 color = originalcolor;
 	
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
 	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
@@ -111,11 +112,13 @@ void main()
 						case 3: color = texture(patch3, newLoc) * f_colormultiplicator; break;
 					}
 					if (color.a>0.95 && 
-						(f_texcoord.x < left+ offsetLeft
+						(f_texcoord.x < left
 						|| f_texcoord.x > right+offsetRight
 						|| f_texcoord.y < top+ offsetTop
 						|| f_texcoord.y > bottom+offsetBottom))
-					color = texture(texture0, f_texcoord) * f_colormultiplicator;
+						{
+								color = originalcolor;
+						}
 					
 				}
 			}
