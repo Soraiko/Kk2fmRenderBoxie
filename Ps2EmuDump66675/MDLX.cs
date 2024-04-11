@@ -35,27 +35,28 @@ namespace BDxGraphiK
 
 		}
 
-		Bitmap[] Textures;
+		Bitmap[] Textures = new Bitmap[0];
 		Bitmap[] TexturePatches = new Bitmap[0];
-		Rectangle[] Patch_DestinationRectangles;
-		
-		int[] Patch_Counts;
-		public int[] Patch_DestinationTextureIndices;
-		public int[] PatchOffsets;
-		public int[] PatchSizes;
+		Rectangle[] Patch_DestinationRectangles = new Rectangle[0];
+
+		int[] Patch_Counts = new int[0];
+		public int[] Patch_DestinationTextureIndices = new int[0];
+		public int[] PatchOffsets = new int[0];
+		public int[] PatchSizes = new int[0];
 
 		public MDLX(string filename)
 		{
 			FileStream fs = new FileStream(filename, FileMode.Open);
 			this.mdlx = new SrkAlternatives.Mdlx(fs);
 
-			if (fs.Length < 1024 * 1024)
+			if (fs.Length < 1024 * 1024 * 2)
 			{
 				for (int i=0;i< this.mdlx.Files.Count;i++)
 				{
 					if (this.mdlx.Files[i].Type == 7)
 					{
 						MDLXTimEditor.MdlxTextures.FromTIMBytes(ref this.mdlx.Files[i].Data, true);
+
 
 						this.Textures = MDLXTimEditor.MdlxTextures.Textures;
 						this.TexturePatches = MDLXTimEditor.MdlxTextures.TexturePatches;
@@ -64,6 +65,8 @@ namespace BDxGraphiK
 						this.Patch_Counts = MDLXTimEditor.MdlxTextures.Patch_Counts;
 						this.Patch_DestinationRectangles = MDLXTimEditor.MdlxTextures.Patch_DestinationRectangles;
 						this.Patch_DestinationTextureIndices = MDLXTimEditor.MdlxTextures.Patch_DestinationTextureIndices;
+						MDLXTimEditor.MdlxTextures.ClearData();
+
 						break;
 					}
 				}
@@ -395,7 +398,7 @@ namespace BDxGraphiK
 					}
 					if (keypair.Key == "colormultiplicator")
 					{
-						if (hasColor_ && grayColors / (float)allColors > 0.1)
+						if (/*mdlx.models[i].Name != "BOB" &&*/ hasColor_ && grayColors / (float)allColors > 0.1)
 						{
 							/*Console.WriteLine("");
 							Console.WriteLine(filename);
@@ -427,9 +430,6 @@ namespace BDxGraphiK
 			}
 			if (map)
 			{
-				this.Variables["frustrum_bytes"] = new List<byte[]>(0);
-				this.Variables["frustrum_counts"] = new List<int>(0);
-				this.Variables["frustrum_dirty"] = true;
 				foreach (Bar barFile in mdlx.Files)
 				{
 					if (barFile.Type == (ushort)BuilderMdlx.BAR.EntryType.FogColor)
@@ -467,7 +467,7 @@ namespace BDxGraphiK
 					foreach (Object3D obj in sk0s)
 						obj.Draw(false);
 				}
-
+				
 				if (map.Models.ContainsKey("SK1"))
 				{
 					var sk1s = map.Models["SK1"];
@@ -481,6 +481,7 @@ namespace BDxGraphiK
 					foreach (Object3D obj in maps)
 						obj.Draw(false);
 				}
+
 			}
 		}
 
@@ -518,6 +519,7 @@ namespace BDxGraphiK
 
 
 			public static bool[] RememberFrustrum = new bool[0];
+			public static string RememberFrustrumMAPName = "";
 			public byte[] MemRegionData;
 
 			public static Vector3 UpAxises = new Vector3(Vector3.UnitX.X, -Vector3.UnitY.Y, -Vector3.UnitZ.Z);
@@ -611,7 +613,7 @@ namespace BDxGraphiK
 
 								for (int j = 0; tIndex < 0 && j < mdlx.PatchOffsets.Length; j++)
 								{
-									if (offset2 > mdlx.PatchOffsets[j] && offset2 < mdlx.PatchOffsets[j] + 0x3000)
+									if (offset2 > mdlx.PatchOffsets[j] && offset2 < mdlx.PatchOffsets[j] + 0x5000)
 									{
 										tIndex = mdlx.Patch_DestinationTextureIndices[j];
 									}
@@ -813,6 +815,39 @@ namespace BDxGraphiK
 			public int lastANBForInterpolate;
 
 
+			public static void UpdateBob(SrkProcessStream stream, int memRegion, Object3D model)
+			{
+				byte[] buffer = new byte[0x40];
+				stream.Read(memRegion + 0x10, ref buffer);
+
+				Matrix4[] transform = new Matrix4[1];
+				Marshal.Copy(buffer, 0, Marshal.UnsafeAddrOfPinnedArrayElement(transform, 0), buffer.Length);
+
+				OpenTK.Quaternion rotation = transform[0].ExtractRotation();
+				OpenTK.Vector3 translation = transform[0].ExtractTranslation();
+
+				translation = new Vector3(translation.X, -translation.Y, -translation.Z);
+				rotation = new OpenTK.Quaternion(rotation.X, -rotation.Y, -rotation.Z, rotation.W);
+
+				transform[0] = Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(translation);
+				model.Skeleton.Transform = transform[0];
+
+
+				buffer = new byte[model.Skeleton.Joints.Count * 0x30];
+				stream.Read(memRegion + 0x440, ref buffer);
+				Matrix4[] matrices = new Matrix4[model.Skeleton.Joints.Count];
+				Marshal.Copy(buffer, 0, Marshal.UnsafeAddrOfPinnedArrayElement(matrices, 0), buffer.Length);
+
+				model.Skeleton.Joints[0].Transform =
+					Matrix4.CreateScale(matrices[0][0, 0], matrices[0][0, 1], matrices[0][0, 2]) *
+					Matrix4.CreateFromQuaternion(new OpenTK.Quaternion(matrices[0][1, 0], matrices[0][1, 1], matrices[0][1, 2])) *
+					Matrix4.CreateTranslation(matrices[0][2, 0], matrices[0][2, 1], matrices[0][2, 2]);
+
+				model.Skeleton.ComputeMatrices();
+				model.Skeleton.PassComputedTransforms();
+				model.Skeleton.SendMatricesToUniformObject();
+			}
+
 			public static bool UpdateModel(RAM_Model modelRamModel, bool mapDiffuseRegions, bool meshSkipRenders, bool transformModels, bool texturePatches)
 			{
 				for (int i = 0; i < modelRamModel.Model.Models.Count; i++)
@@ -959,7 +994,8 @@ namespace BDxGraphiK
 								bool[] frustrums = new bool[meshes.Count];
 								if (frustrumCullingEnabled != CheckState.Unchecked)
 								{
-									if (RememberFrustrum.Length == 0)
+									if (RememberFrustrum.Length != meshes.Count)
+										RememberFrustrum = new bool[meshes.Count];
 										RememberFrustrum = new bool[meshes.Count];
 
 									if (mapRamModel.Model.Models.ElementAt(m).Key == "MAP")
@@ -1054,7 +1090,29 @@ namespace BDxGraphiK
 					ram_Model.Model = new MDLX(filename);
 					ramModelsHistory.Add(filename, ram_Model);
 				}
+				if (ram_Model.Model.Models.ContainsKey("BOB"))
+				{
+					var bobs = ram_Model.Model.Models["BOB"];
+					
+					byte[] modelHeader = new byte[ram_Model.Model.mdlx.Files.Count*0x10];
+					processStream.Read(mapAddress+0x10, ref  modelHeader);
 
+					for (int i = 0; i < ram_Model.Model.mdlx.Files.Count; i++)
+					{
+						if (System.BitConverter.ToInt16(modelHeader, i * 0x10) == 4 &&
+							Encoding.ASCII.GetString(modelHeader, i * 0x10 + 0x04, 3) == "BOB")
+						{
+							for (int j = 0; j < bobs.Count; j++)
+							{
+								if (bobs[j].Variables.ContainsKey("ModelOffset") == false)
+								{
+									bobs[j].Variables["ModelOffset"] = System.BitConverter.ToInt32(modelHeader, i * 0x10 + 0x08);
+									break;
+								}
+							}
+						}
+					}
+				}
 				return ram_Model;
 			}
 

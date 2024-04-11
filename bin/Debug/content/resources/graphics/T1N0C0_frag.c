@@ -44,7 +44,8 @@ uniform int patch3_index;
 
 void main()
 {
-	vec4 originalcolor = texture(texture0, f_texcoord) * f_colormultiplicator;
+	vec2 ftexcoord = f_texcoord;
+	vec4 originalcolor = texture(texture0, ftexcoord) * f_colormultiplicator;
 	vec4 color = originalcolor;
 	
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
@@ -94,13 +95,13 @@ void main()
 				float offsetBottom = -0.5/patch_orw_orh.y;
 				
 				if (
-				f_texcoord.x > left
-				&& f_texcoord.x < right
-				&& f_texcoord.y > top
-				&& f_texcoord.y < bottom
+				ftexcoord.x > left
+				&& ftexcoord.x < right
+				&& ftexcoord.y > top
+				&& ftexcoord.y < bottom
 				)
 				{
-					vec2 newLoc = vec2((f_texcoord.x-left)/(right-left), (f_texcoord.y-top)/(bottom-top));
+					vec2 newLoc = vec2((ftexcoord.x-left)/(right-left), (ftexcoord.y-top)/(bottom-top));
 					newLoc.y = newLoc.y/count;
 					newLoc.y += (1/count) * patch_index;
 					
@@ -111,15 +112,14 @@ void main()
 						case 2: color = texture(patch2, newLoc) * f_colormultiplicator; break;
 						case 3: color = texture(patch3, newLoc) * f_colormultiplicator; break;
 					}
-					if (color.a>0.95 && 
-						(f_texcoord.x < left
-						|| f_texcoord.x > right+offsetRight
-						|| f_texcoord.y < top+ offsetTop
-						|| f_texcoord.y > bottom+offsetBottom))
+					if (color.a>0.5 && 
+						(ftexcoord.x < left
+						|| ftexcoord.x > right+offsetRight
+						|| ftexcoord.y < top+ offsetTop
+						|| ftexcoord.y > bottom+offsetBottom))
 						{
 								color = originalcolor;
 						}
-					
 				}
 			}
 		}

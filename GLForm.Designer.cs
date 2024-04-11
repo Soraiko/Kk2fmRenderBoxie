@@ -59,6 +59,7 @@
 			this.interframeInterpolate = new System.Windows.Forms.CheckBox();
 			this.texturePatches = new System.Windows.Forms.CheckBox();
 			this.smartBlending = new System.Windows.Forms.CheckBox();
+			this.showBobModels = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown4)).BeginInit();
@@ -490,12 +491,24 @@
 			this.smartBlending.Text = "Smart blending (Experimental, more render layers)";
 			this.smartBlending.UseVisualStyleBackColor = false;
 			// 
+			// showBobModels
+			// 
+			this.showBobModels.AutoSize = true;
+			this.showBobModels.BackColor = System.Drawing.Color.Transparent;
+			this.showBobModels.Location = new System.Drawing.Point(13, 350);
+			this.showBobModels.Name = "showBobModels";
+			this.showBobModels.Size = new System.Drawing.Size(142, 17);
+			this.showBobModels.TabIndex = 39;
+			this.showBobModels.Text = "Bob models (In progress)";
+			this.showBobModels.UseVisualStyleBackColor = false;
+			// 
 			// GLForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
 			this.ClientSize = new System.Drawing.Size(1266, 675);
+			this.Controls.Add(this.showBobModels);
 			this.Controls.Add(this.smartBlending);
 			this.Controls.Add(this.texturePatches);
 			this.Controls.Add(this.interframeInterpolate);
@@ -576,5 +589,6 @@
 		private System.Windows.Forms.CheckBox interframeInterpolate;
 		public System.Windows.Forms.CheckBox texturePatches;
 		public System.Windows.Forms.CheckBox smartBlending;
+		public System.Windows.Forms.CheckBox showBobModels;
 	}
 }

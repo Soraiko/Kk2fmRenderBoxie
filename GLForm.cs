@@ -54,7 +54,6 @@ namespace BDxGraphiK
 			this.glControl2.RenderFrame += smallViewport_RenderFrame;
 			this.glControl3.RenderFrame += smallViewport_RenderFrame2;
 			checkBox2.Checked = false;
-			//checkBox2_CheckedChanged(null, null);
 		}
 
 		string pcsx2pName = "";
@@ -150,7 +149,6 @@ namespace BDxGraphiK
 						}
 						else
 						{
-							MDLX.RAM_Model.RememberFrustrum = new bool[0];
 							models.Add(newModel);
 							modelsMemRegions.Add(memRegion);
 						}
@@ -171,15 +169,43 @@ namespace BDxGraphiK
 							}
 						}
 					}
+					if (showBobModels.Checked)
+					{
+						var aw_bobs_array = awaitingBobs.ToArray();
+						var aw_bobsmemregion_array = awaitingBobsMemRegions.ToArray();
+
+						for (int i = 0; i < aw_bobs_array.Length; i++)
+						{
+							bobs.Add(aw_bobs_array[i].Clone());
+							bobsMemRegions.Add(aw_bobsmemregion_array[i]);
+							awaitingBobs.Remove(aw_bobs_array[i]);
+							awaitingBobsMemRegions.Remove(aw_bobsmemregion_array[i]);
+						}
+
+						var bobs_array = bobs.ToArray();
+						var bobsmemregion_array = bobsMemRegions.ToArray();
+						for (int i = 0; i < bobs_array.Length; i++)
+						{
+							RAM_Model.UpdateBob(stream, bobsmemregion_array[i], bobs_array[i]);
+						}
+					}
 				}
 			}
 			else
 			{
 				map = null;
-				MDLX.RAM_Model.RememberFrustrum = new bool[0];
 				models.Clear();
+
+				bobs.Clear();
+				bobsMemRegions.Clear();
+
+				awaitingBobs.Clear();
+				awaitingBobsMemRegions.Clear();
+
 				modelsMemRegions.Clear();
 				awaitingModelsMemRegions.Clear();
+
+				MDLX.RAM_Model.RememberFrustrum = new bool[0];
 			}
 
 
@@ -214,6 +240,15 @@ namespace BDxGraphiK
 				for (int i = 0; i < models.Length; i++)
 				{
 					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+				}
+			}
+
+			if (showBobModels.Checked)
+			{
+				var bobs_array = bobs.ToArray();
+				for (int i = 0; i < bobs_array.Length; i++)
+				{
+					bobs_array[i].Draw(false);
 				}
 			}
 
@@ -282,15 +317,15 @@ namespace BDxGraphiK
 			int position = 0x003A7FC0;
 			int lookAt = 0x003A7FD0;
 
-			int position2 = 0x21D9E7F0;
-			int lookAt2 = 0x21D9E800;
+			int position2 = 0x01D9E7F0;
+			int lookAt2 = 0x01D9E800;
 
 
 			Vector3 camPosition = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
 			Vector3 camLookAt = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
 
-			Vector3 camPosition2 = new Vector3(stream.ReadSingle(position), -stream.ReadSingle(position + 4), -stream.ReadSingle(position + 8));
-			Vector3 camLookAt2 = new Vector3(stream.ReadSingle(lookAt), -stream.ReadSingle(lookAt + 4), -stream.ReadSingle(lookAt + 8));
+			Vector3 camPosition2 = new Vector3(stream.ReadSingle(position2), -stream.ReadSingle(position2 + 4), -stream.ReadSingle(position2 + 8));
+			Vector3 camLookAt2 = new Vector3(stream.ReadSingle(lookAt2), -stream.ReadSingle(lookAt2 + 4), -stream.ReadSingle(lookAt2 + 8));
 
 			if (Vector3.Distance(camPosition, camPosition2) <0.001&&
 				Vector3.Distance(camLookAt, camLookAt2) < 0.001)
@@ -363,12 +398,11 @@ namespace BDxGraphiK
 		GLControl.RenderLayer mapGlow;
 
 
-		public List<int> modelsMemRegions = new List<int>(0);
-		public List<MDLX.RAM_Model> models = new List<MDLX.RAM_Model>(0);
-		public List<int> awaitingModelsMemRegions = new List<int>();
 
 		public unsafe void SearchModels()
 		{
+			if (map == null)
+				return;
 			int blockSize = 0x100000;
 			byte[] buffer = new byte[blockSize + 0x150];
 			int i;
@@ -402,6 +436,64 @@ namespace BDxGraphiK
 			}
 		}
 
+		public List<int> modelsMemRegions = new List<int>(0);
+		public List<MDLX.RAM_Model> models = new List<MDLX.RAM_Model>(0);
+		public List<int> awaitingModelsMemRegions = new List<int>();
+
+		public List<int> bobsMemRegions = new List<int>(0);
+		public List<Object3D> bobs = new List<Object3D>(0);
+		public List<int> awaitingBobsMemRegions = new List<int>();
+		public List<Object3D> awaitingBobs = new List<Object3D>(0);
+
+		public unsafe void SearchBobs()
+		{
+			if (map == null || showBobModels.Checked == false)
+				return;
+			int blockSize = 0x100000;
+			byte[] buffer = new byte[blockSize + 0x320];
+			int i;
+
+			for (i = 0x01000000; i < 0x04000000;)
+			{
+				stream.Read(i, ref buffer);
+				i -= 0x10;
+				for (int j = 0; j < blockSize; j += 0x10)
+				{
+					i += 0x10;
+
+					if (buffer[j + 0x07] > 1) continue;
+					if (buffer[j + 0x04]%16 > 0) continue;
+					if (buffer[j + 0x07] != buffer[j + 0x317]) continue;
+					if (buffer[j + 0x06] != buffer[j + 0x316]) continue;
+					if (buffer[j + 0x05] != buffer[j + 0x315]) continue;
+					if (buffer[j + 0x04] != buffer[j + 0x314]) continue;
+
+					if (awaitingBobsMemRegions.Contains(i) || bobsMemRegions.Contains(i))
+						continue;
+
+					int Offset = BitConverter.ToInt32(buffer, j + 0x04);
+					if (map!=null && Offset < map.MDLXAddress) continue;
+
+					if (map != null && map.Model!=null && map.Model.Models.ContainsKey("BOB"))
+					{
+						var bobs = map.Model.Models["BOB"];
+						for (int b=0;b< bobs.Count;b++)
+						{
+							if (bobs[b].Variables.ContainsKey("ModelOffset"))
+							{
+								int bobOffset = (int)bobs[b].Variables["ModelOffset"];
+								if (bobOffset == Offset)
+								{
+									this.awaitingBobsMemRegions.Add(i);
+									this.awaitingBobs.Add(bobs[b]);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 
 		public void CreateThread()
 		{
@@ -412,7 +504,10 @@ namespace BDxGraphiK
 			}
 			objentryThread = new System.Threading.Thread(() => {
 				while (true)
+				{
 					SearchModels();
+					SearchBobs();
+				}
 			});
 			objentryThread.Start();
 		}
@@ -446,6 +541,7 @@ namespace BDxGraphiK
 			interframeInterpolate.Visible = checkBox2.Checked;
 			smartBlending.Visible = checkBox2.Checked;
 			texturePatches.Visible = checkBox2.Checked;
+			showBobModels.Visible = checkBox2.Checked;
 		}
 
 		private void multipleRenders_CheckedChanged(object sender, EventArgs e)

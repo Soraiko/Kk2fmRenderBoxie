@@ -18,10 +18,11 @@ uniform vec4 fog_near_far_min_max;
 
 void main()
 {
+	vec2 ftexcoord = f_texcoord;
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
 	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
 	
-	vec4 color = texture(texture0, f_texcoord);
+	vec4 color = texture(texture0, ftexcoord);
 	
 	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
 		discard;
@@ -70,7 +71,7 @@ void main()
 	}
 	
     vec3 ambient = light0_diffuse_strength * light0_color;
-	vec3 normal = texture(bump_mapping, f_texcoord).rgb;
+	vec3 normal = texture(bump_mapping, ftexcoord).rgb;
 	
 	normal = normal * 2.0 - 1.0;
 	normal = normalize(normal);
@@ -80,8 +81,8 @@ void main()
 	vec3 p_dx = dFdx(f_position);
 	vec3 p_dy = dFdy(f_position);
 	// compute derivations of the texture coordinate
-	vec2 tc_dx = dFdx(-f_texcoord);
-	vec2 tc_dy = dFdy(-f_texcoord);
+	vec2 tc_dx = dFdx(-ftexcoord);
+	vec2 tc_dy = dFdy(-ftexcoord);
 	
 	// compute initial tangent and bi-tangent
 	vec3 t = normalize(tc_dy.y * p_dx - tc_dx.y * p_dy);
