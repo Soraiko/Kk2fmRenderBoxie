@@ -833,6 +833,7 @@ namespace BDxGraphiK
 
 
 				Vector3 mirrorScale = new Vector3(BitConverter.ToSingle(transform_buffer, 0), BitConverter.ToSingle(transform_buffer, 4), BitConverter.ToSingle(transform_buffer, 8));
+				
 
 				stream.Read(offsetToMatrices, ref matrices_buffer);
 				Matrix4[] matrices = new Matrix4[model.Skeleton.Joints.Count];

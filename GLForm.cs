@@ -149,6 +149,7 @@ namespace BDxGraphiK
 						}
 						else
 						{
+							MDLX.RAM_Model.RememberFrustrum = new bool[0];
 							models.Add(newModel);
 							modelsMemRegions.Add(memRegion);
 						}
