@@ -6,28 +6,23 @@ in vec2 f_texcoord;
 in vec4 f_color;
 in float f_skinned;
 
-uniform int glow_mesh;
 uniform vec4 colormultiplicator;
+uniform int has_color;
 
 void main()
 {
-	vec4 color = texture(texture0, f_texcoord);
-	
-	/*if (color.w < 0.999)
-		discard;*/
+	vec4 color = texture(texture0, f_texcoord) * vec4(1,1,1,2) * f_color * colormultiplicator;
+	if (has_color == 1)
+	{
+		color*=2;
+	}
 	
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
 	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
 	
-	if (glow_mesh == 0 || distance(eyePosition, f_position) > 10000 || distance(f_color.xyz, vec3(1,1,1)) > 0.01)
+	if (color.a < 1.1)
 	{
 		color = vec4(0,0,0,1);
-	}
-	else
-	{
-		color *= color.w;
-		//color = f_color * color;
-		color.w = 0.5;
 	}
 	
 	

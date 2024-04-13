@@ -182,8 +182,8 @@ namespace BDxGraphiK
 
 		public static string AlphaTest_UniformName = "";
 		public static string FogColor_UniformName = "";
-		Color fogColor = Color.FromArgb(255, 128, 128, 128);
-		public Color FogColor
+		Vector4 fogColor = new Vector4(0,0,0,0);
+		public Vector4 FogColor
 		{
 			get
 			{

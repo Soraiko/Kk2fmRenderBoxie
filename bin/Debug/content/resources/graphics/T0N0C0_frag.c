@@ -8,7 +8,7 @@ in float f_alphatest;
 uniform int fog_mode;
 in vec4 f_colormultiplicator;
 uniform vec3 fog_position;
-uniform vec3 fog_color;
+uniform vec4 fog_color;
 uniform vec4 fog_near_far_min_max;
 
 void main()
@@ -62,6 +62,7 @@ void main()
 		color.x = output.x;
 		color.y = output.y;
 		color.z = output.z;
+		color *= fog_color.w;
 	}
 	
 	

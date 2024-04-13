@@ -10,7 +10,7 @@ uniform float light0_diffuse_strength;
 in float f_alphatest;
 uniform int fog_mode;
 in vec4 f_colormultiplicator;
-uniform vec3 fog_color;
+uniform vec4 fog_color;
 uniform vec4 fog_near_far_min_max;
 
 void main()
@@ -19,23 +19,6 @@ void main()
 	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
 	vec4 color = f_colormultiplicator;
 	
-	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 1.5 && f_alphatest < 2.5) && (fog_mode > 0 || (color.w < 0.01 || color.w >=0.95)))
-		discard;
-	
-	if ((f_alphatest > 2.5 && f_alphatest < 3.5) && (color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 3.5 && f_alphatest < 4.5) && (fog_mode == 0 || (color.w < 0.01 || color.w >=0.95)))
-		discard;
-	
-	if ((f_alphatest > 4.5 && f_alphatest < 5.5) && (color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
-		discard;
 	
 	if (fog_mode > 0 && isnan(fog_near_far_min_max.x) == false)
 	{
@@ -63,6 +46,7 @@ void main()
 		color.x = output.x;
 		color.y = output.y;
 		color.z = output.z;
+		color *= fog_color.w;
 	}
 	
     vec3 ambient = light0_diffuse_strength * light0_color;
@@ -73,5 +57,22 @@ void main()
 	vec3 diffuse = diff * light0_color;
 	vec3 amb_n_diffuse = (ambient + diffuse);
 
+	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 1.5 && f_alphatest < 2.5) && (fog_mode > 0 || (color.w < 0.01 || color.w >=0.95)))
+		discard;
+	
+	if ((f_alphatest > 2.5 && f_alphatest < 3.5) && (color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 3.5 && f_alphatest < 4.5) && (fog_mode == 0 || (color.w < 0.01 || color.w >=0.95)))
+		discard;
+	
+	if ((f_alphatest > 4.5 && f_alphatest < 5.5) && (color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
+		discard;
 	gl_FragColor = vec4(amb_n_diffuse, 1.0) * color;
 }

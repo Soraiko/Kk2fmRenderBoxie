@@ -105,6 +105,13 @@ namespace BDxGraphiK
 			object3D.StreamRW = this.StreamRW;
 			object3D.StreamRW.BaseStream.Position = 0;
 			object3D.BufferBinary();
+			for (int i = 0; i < this.Meshes.Count; i++)
+			{
+				if (this.Meshes[i].ShadowMesh != null)
+				{
+					object3D.Meshes[i].ShadowMesh = this.Meshes[i].ShadowMesh;
+				}
+			}
 			/* On défini les uniforms après pour ne pas écraser ceux des modèles préchargés dans la RAM (MDLX non exportés en binaires) */
 			object3D.QueryUniforms = this.QueryUniforms;
 			object3D.QueryUniformsArrays = this.QueryUniformsArrays;
@@ -294,6 +301,17 @@ namespace BDxGraphiK
 								mesh.QueryUniformsArrays.Add(Vector2.Zero);
 							}
 						}
+						if (mesh.Colors.Count>0)
+						{
+							for (int qu = 0; qu < this.QueryUniforms.Count; qu++)
+							{
+								var keypair = this.QueryUniforms.ElementAt(qu);
+								if (keypair.Key == "has_color")
+								{
+									this.QueryUniformsArrays[qu] = true;
+								}
+							}
+						}
 					break;
 				}
 			}
@@ -366,7 +384,7 @@ namespace BDxGraphiK
 				List<List<Vector3D>> vertices_s = new List<List<Vector3D>>(0);
 				List<List<Vector3D>> texcoords_s = new List<List<Vector3D>>(0);
 				List<List<Vector3D>> normals_s = new List<List<Vector3D>>(0);
-				List<List<Color4D>> colors_s = new List<List<Color4D>>(0);
+				List<List<Color>> colors_s = new List<List<Color>>(0);
 				List<short[]> indices_s = new List<short[]>(0);
 				List<List<List<short>>> influences_s = new List<List<List<short>>>(0);
 				List<List<List<float>>> weights_s = new List<List<List<float>>>(0);
@@ -412,7 +430,7 @@ namespace BDxGraphiK
 					List<List<float>> weights_ = new List<List<float>>(0);
 					List<Vector3D> texcoords = new List<Vector3D>(0);
 					List<Vector3D> normals = new List<Vector3D>(0);
-					List<Color4D> colors = new List<Color4D>(0);
+					List<Color> colors = new List<Color>(0);
 					List<short> indices = new List<short>(0);
 
 					for (int j = 0; j < indicesPerTip_tab.Length+1; j++)
@@ -463,7 +481,7 @@ namespace BDxGraphiK
 							weights_ = new List<List<float>>(0);
 							texcoords = new List<Vector3D>(0);
 							normals = new List<Vector3D>(0);
-							colors = new List<Color4D>(0);
+							colors = new List<Color>(0);
 							indices = new List<short>(0);
 							if (currTipCount < 0)
 								break;
@@ -474,7 +492,7 @@ namespace BDxGraphiK
 
 						Vector3D curr_texcoord = new Vector3D(Single.NaN,0,0);
 						Vector3D curr_normal = new Vector3D(Single.NaN, 0,0);
-						Color4D curr_color = new Color4D(Single.NaN, 1,1,1);
+						Color curr_color = System.Drawing.Color.FromArgb(0, 0,0,0);
 
 						if (mesh.HasTextureCoords(0))
 							curr_texcoord = mesh.TextureCoordinateChannels[0][index] * new Vector3D(1f, -1f, 1f);
@@ -483,7 +501,10 @@ namespace BDxGraphiK
 							curr_normal = mesh.Normals[index];
 
 						if (mesh.HasVertexColors(0))
-							curr_color = mesh.VertexColorChannels[0][index];
+						{
+							var col = mesh.VertexColorChannels[0][index] * 0.5f;
+							curr_color = Color.FromArgb((byte)col.A, (byte)col.R, (byte)col.G, (byte)col.B);
+						}
 
 						int newIndex = vertices.Count;
 						for (int m = 0; m < vertices.Count; m++)
@@ -627,6 +648,7 @@ namespace BDxGraphiK
 		{
 			["fog_mode"] = -1,
 			["colormultiplicator"] = -1,
+			["has_color"] = -1,
 			["has_patch"] = -1
 		};
 
@@ -634,6 +656,7 @@ namespace BDxGraphiK
 		{
 			(int)Mesh.Shader.FogMode.None,
 			new Vector4(1f),
+			false,
 			false
 		};
 

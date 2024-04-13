@@ -231,17 +231,7 @@ namespace SrkAlternatives
 						removeTexcoordinatesNode.ParentNode.RemoveChild(removeTexcoordinatesNode);
 						geometry_new.SelectSingleNode("//triangles/input[contains(@source,'COLOR')]").Attributes["offset"].Value = "1";
 					}
-					bool has_color = false;
-					for (int k = 0; k < mesh.colors.Count; k++)
-					{
-						if (mesh.colors[k].R < 255 ||
-							mesh.colors[k].G < 255 ||
-							mesh.colors[k].B < 255 ||
-							mesh.colors[k].A < 255)
-						{
-							has_color = true;
-						}
-					}
+					bool has_color = mesh.colors.Count > 0;
 					if (has_color)
 					{
 						array_node = geometry_new.SelectSingleNode("//float_array[contains(@id,'COLOR')]");
@@ -560,7 +550,6 @@ namespace SrkAlternatives
 								}
 							}
 
-							model.DoubleOpacities.Add(listBitmapWrapModes[w].DoubleOpacity);
 							model.Textures.Add(output);
 							model.WrapModes.Add(new OpenTK.Graphics.OpenGL.TextureWrapMode[] {
 							(OpenTK.Graphics.OpenGL.TextureWrapMode)(int)addressMode.AddressU,
@@ -607,7 +596,6 @@ namespace SrkAlternatives
 			public Skeleton Skeleton;
 			public List<System.Drawing.Bitmap> Textures = new List<System.Drawing.Bitmap>(0);
 			public List<OpenTK.Graphics.OpenGL.TextureWrapMode[]> WrapModes = new List<OpenTK.Graphics.OpenGL.TextureWrapMode[]>(0);
-			public List<bool> DoubleOpacities = new List<bool>(0);
 			public string Name;
 
 			public List<Mesh> Meshes;
@@ -619,8 +607,7 @@ namespace SrkAlternatives
 				this.Textures = null;
 				this.WrapModes.Clear();
 				this.WrapModes = null;
-				this.DoubleOpacities.Clear();
-				this.DoubleOpacities = null;
+
 				for (int i = 0; i < this.Meshes.Count; i++)
 				{
 					this.Meshes[i].colors.Clear();
@@ -1101,14 +1088,10 @@ namespace SrkAlternatives
 
 				for (int i = 0; i < count_color; i++)
 				{
-					int r = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x00) * 2;
-					int g = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x04) * 2;
-					int b = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x08) * 2;
-					int a = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x0C) * 2;
-					if (r > 255) r = 255;
-					if (g > 255) g = 255;
-					if (b > 255) b = 255;
-					if (a > 255) a = 255;
+					int r = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x00);
+					int g = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x04);
+					int b = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x08);
+					int a = global::System.BitConverter.ToInt32(vu_memory, offset_color + i * 0x10 + 0x0C);
 					mesh.colors.Add(System.Drawing.Color.FromArgb(a, r, g, b));
 				}
 				for (int i = 0; i < count_texcoo_ind_strips; i++)

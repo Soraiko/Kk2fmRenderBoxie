@@ -15,7 +15,7 @@ in float f_skinned;
 
 uniform int fog_mode;
 in vec4 f_colormultiplicator;
-uniform vec3 fog_color;
+uniform vec4 fog_color;
 uniform vec4 fog_near_far_min_max;
 
 uniform int has_patch;
@@ -46,11 +46,10 @@ uniform int patch3_index;
 void main()
 {
 	vec2 ftexcoord = f_texcoord;
-	vec4 fcolor = f_color * vec4(1,1,1,3.984375)*f_colormultiplicator;
+	vec4 fcolor = f_color * 2 * f_colormultiplicator;
 	
-	vec4 originalcolor = texture(texture0, ftexcoord) * fcolor;
+	vec4 originalcolor = texture(texture0, ftexcoord) * vec4(1,1,1,2) * fcolor;
 	vec4 color = originalcolor;
-	
 	
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
 	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
@@ -111,10 +110,10 @@ void main()
 					
 					switch (i)
 					{
-						case 0: color = texture(patch0, newLoc) * f_colormultiplicator; break;
-						case 1: color = texture(patch1, newLoc) * f_colormultiplicator; break;
-						case 2: color = texture(patch2, newLoc) * f_colormultiplicator; break;
-						case 3: color = texture(patch3, newLoc) * f_colormultiplicator; break;
+						case 0: color = texture(patch0, newLoc) * vec4(1,1,1,2) * fcolor; break;
+						case 1: color = texture(patch1, newLoc) * vec4(1,1,1,2) * fcolor; break;
+						case 2: color = texture(patch2, newLoc) * vec4(1,1,1,2) * fcolor; break;
+						case 3: color = texture(patch3, newLoc) * vec4(1,1,1,2) * fcolor; break;
 					}
 					if (color.a>0.5 && 
 						(ftexcoord.x < left
@@ -122,11 +121,39 @@ void main()
 						|| ftexcoord.y < top+ offsetTop
 						|| ftexcoord.y > bottom+offsetBottom))
 						{
-								color = originalcolor;
+							color = originalcolor;
 						}
 				}
 			}
 		}
+	}
+	
+	if (fog_mode > 0 && isnan(fog_near_far_min_max.x) == false)
+	{
+		vec3 beforeNear = vec3(color.x, color.y, color.z) * (fog_near_far_min_max.w/255.0) + vec3(fog_color.x, fog_color.y, fog_color.z) * (1-(fog_near_far_min_max.w/255.0));
+		vec3 afterFar = vec3(color.x, color.y, color.z)  * (fog_near_far_min_max.z/255.0) + vec3(fog_color.x, fog_color.y, fog_color.z) * (1-(fog_near_far_min_max.z/255.0));
+		
+		vec3 axis = vec3(1,1,1);
+		if (fog_mode == 2)
+			axis.y = 0;
+		
+		float distance_fog_pos = distance(eyePosition*axis, f_position*axis);
+		float fog = 0.0;
+		
+		
+		if (distance_fog_pos > fog_near_far_min_max.x)
+		{
+			fog = (distance_fog_pos - fog_near_far_min_max.x)/(fog_near_far_min_max.y-fog_near_far_min_max.x);
+			if (fog > 1)
+			{
+				fog = 1;
+			}
+		}
+		vec3 output = beforeNear * (1.0-fog) + afterFar * fog;
+		
+		color.x = output.x;
+		color.y = output.y;
+		color.z = output.z;
 	}
 	
 	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
@@ -146,35 +173,6 @@ void main()
 	
 	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
 		discard;
-	
-	if (fog_mode > 0 && isnan(fog_near_far_min_max.x) == false)
-	{
-		vec3 beforeNear = vec3(color.x, color.y, color.z) * (fog_near_far_min_max.w/255.0) + vec3(fog_color.x, fog_color.y, fog_color.z) * (1-(fog_near_far_min_max.w/255.0));
-		vec3 afterFar = vec3(color.x, color.y, color.z)  * (fog_near_far_min_max.z/255.0) + vec3(fog_color.x, fog_color.y, fog_color.z) * (1-(fog_near_far_min_max.z/255.0));
-		
-		vec3 axis = vec3(1,1,1);
-		if (fog_mode == 2)
-			axis.y = 0;
-		
-		float distance_fog_pos = distance(eyePosition*axis, f_position*axis);
-		float fog = 0.0;
-		
-		
-		if (distance_fog_pos > fog_near_far_min_max.x)
-		{
-			fog = (distance_fog_pos - fog_near_far_min_max.x)/(fog_near_far_min_max.y-fog_near_far_min_max.x);
-			if (fog > 1.0)
-			{
-				fog = 1.0;
-			}
-		}
-		vec3 output = beforeNear * (1.0-fog) + afterFar * fog;
-		
-		color.x = output.x;
-		color.y = output.y;
-		color.z = output.z;
-	}
-	
 	
 	gl_FragColor = color;
 }

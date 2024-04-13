@@ -486,7 +486,7 @@ namespace BDxGraphiK
 				}
 				if (location > -1)
 				{
-					GL.Uniform3(location, (float)(glControl.FogColor.R / 255f), (float)(glControl.FogColor.G / 255f), (float)(glControl.FogColor.B / 255f));
+					GL.Uniform4(location, glControl.FogColor);
 				}
 
 				location = GLControl.UniformLocations[i][GLControl.FogInfo_UniformName];

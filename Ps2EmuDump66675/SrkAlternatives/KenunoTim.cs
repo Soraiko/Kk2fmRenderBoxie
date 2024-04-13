@@ -292,7 +292,21 @@ namespace SrkAlternatives
 				byte[] buftbp0 = new byte[Math.Max(8192, sizetbp0)]; // needs at least 8kb
 				Array.Copy(gs, 256 * t0TBP0, buftbp0, 0, Math.Min(gs.Length - 256 * t0TBP0, Math.Min(buftbp0.Length, sizetbp0)));
 				byte[] bufcbpX = new byte[8192];
+
 				Array.Copy(gs, 256 * t0CBP, bufcbpX, 0, bufcbpX.Length);
+
+				for (int i = 0; i < bufcbpX.Length; i += 4)
+				{
+					if (bufcbpX[i + 3] == 255)
+					{
+						for (int j = 0; j < bufcbpX.Length; j += 4)
+						{
+							if (bufcbpX[j + 3]<128)
+							bufcbpX[j + 3] = (byte)Math.Min(bufcbpX[j + 3] * 2, 128);
+						}
+						break;
+					}
+				}
 
 				XDebug.WriteLine(string.Format("# p2 {0:x4} {1:x4} {2,2}", t0TBP0, t0CBP, t0CSA));
 
@@ -345,7 +359,6 @@ namespace SrkAlternatives
 
 		public class STim
 		{
-			public bool DoubleOpacity;
 			public TextureAddressMode TextureAddressMode;
 			public Bitmap pic;
 			public TFX tfx = TFX.Modulate;
@@ -488,8 +501,6 @@ namespace SrkAlternatives
 		{
 			public static STim Decode8(byte[] picbin, byte[] palbin, int tbw, int cx, int cy)
 			{
-				int[] zero_half_one_none = new int[4];
-
 				Bitmap pic = new Bitmap(cx, cy, global::System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
 				tbw /= 2;
 				XDebug.Assert(tbw != 0, "Invalid");
@@ -519,26 +530,15 @@ namespace SrkAlternatives
 				for (int pi = 0; pi < 256; pi++)
 				{
 					int alpha = AcUt.GetA(palbin[psi + 4 * pi + 3]) ^ (pi & 1);
-					if (alpha == 0)
-						zero_half_one_none[0]++;
-					else if (alpha == 175)
-						zero_half_one_none[1]++;
-					else if (alpha == 255)
-						zero_half_one_none[2]++;
-					else
-						zero_half_one_none[3]++;
-
 					pals.Entries[pi] = CUtil.Gamma(Color.FromArgb(
 						alpha,
-						Math.Min(255, palbin[psi + 4 * pi + 0] + 1),
-						Math.Min(255, palbin[psi + 4 * pi + 1] + 1),
-						Math.Min(255, palbin[psi + 4 * pi + 2] + 1)
+						Math.Min(255, palbin[psi + 4 * pi + 0] + 0),
+						Math.Min(255, palbin[psi + 4 * pi + 1] + 0),
+						Math.Min(255, palbin[psi + 4 * pi + 2] + 0)
 						), γ);
 				}
 				pic.Palette = pals;
 				STim output = new STim(pic);
-				if (zero_half_one_none[1] > zero_half_one_none[3])
-					output.DoubleOpacity = true;
 				return output;
 			}
 			readonly static sbyte[] tbl = new sbyte[] {
@@ -679,13 +679,13 @@ namespace SrkAlternatives
 			{
 				public static byte GetA(byte a)
 				{
-					return (byte)Math.Min(a * 255 / 0x80, 255);
+					return a;
+					//return (byte)Math.Min(a * 255 / 0x80, 255);
 				}
 			}
 
 			public static STim Decode4(byte[] picbin, byte[] palbin, int tbw, int cx, int cy)
 			{
-				int[] zero_half_one_none = new int[4];
 				Bitmap pic = new Bitmap(cx, cy, global::System.Drawing.Imaging.PixelFormat.Format4bppIndexed);
 				tbw /= 2;
 				XDebug.Assert(tbw != 0, "Invalid");
@@ -706,16 +706,7 @@ namespace SrkAlternatives
 				for (int pi = 0; pi < 16; pi++)
 				{
 					int alpha = AcUt.GetA(palbin[psi + 4 * pi + 3]);
-
-					if (alpha == 0)
-						zero_half_one_none[0]++;
-					else if (alpha == 175)
-						zero_half_one_none[1]++;
-					else if (alpha == 255)
-						zero_half_one_none[2]++;
-					else
-						zero_half_one_none[3]++;
-
+					
 					pals.Entries[pi] = CUtil.Gamma(Color.FromArgb(
 						alpha,
 						palbin[psi + 4 * pi + 0],
@@ -725,14 +716,11 @@ namespace SrkAlternatives
 				}
 				pic.Palette = pals;
 				STim output = new STim(pic);
-				if (zero_half_one_none[1] > zero_half_one_none[3])
-					output.DoubleOpacity = true;
 				return output;
 			}
 
 			public static STim Decode4Ps(byte[] picbin, byte[] palbin, int tbw, int cx, int cy, int csa)
 			{
-				int[] zero_half_one_none = new int[4];
 
 				Bitmap pic = new Bitmap(cx, cy, global::System.Drawing.Imaging.PixelFormat.Format4bppIndexed);
 				tbw = Math.Max(1, tbw / 2);
@@ -762,14 +750,6 @@ namespace SrkAlternatives
 				{
 					int alpha = AcUt.GetA(palb2[psi + 4 * pi + 3]);
 
-					if (alpha == 0)
-						zero_half_one_none[0]++;
-					else if (alpha == 175)
-						zero_half_one_none[1]++;
-					else if (alpha == 255)
-						zero_half_one_none[2]++;
-					else
-						zero_half_one_none[3]++;
 					pals.Entries[pi] = CUtil.Gamma(Color.FromArgb(
 						alpha,
 						palb2[psi + 4 * pi + 0],
@@ -779,8 +759,7 @@ namespace SrkAlternatives
 				}
 				pic.Palette = pals;
 				STim output = new STim(pic);
-				if (zero_half_one_none[1] > zero_half_one_none[3])
-					output.DoubleOpacity = true;
+
 				return output;
 			}
 

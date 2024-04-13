@@ -178,7 +178,7 @@ namespace BDxGraphiK
 		public List<List<short>> Influences;
 		public List<List<float>> Weights;
 		public List<Vector3D> TextureCoords;
-		public List<Color4D> Colors;
+		public List<System.Drawing.Color> Colors;
 		public List<Vector3D> Normals;
 		public short[] Indices;
 		public int PrimitiveCount;
@@ -193,7 +193,7 @@ namespace BDxGraphiK
 			this.Object3D = object3d;
 			this.Positions = new List<Vector3D>();
 			this.Normals = new List<Vector3D>();
-			this.Colors = new List<Color4D>();
+			this.Colors = new List<System.Drawing.Color>();
 			this.TextureCoords = new List<Vector3D>();
 
 			this.Influences = new List<List<short>>();
@@ -211,7 +211,7 @@ namespace BDxGraphiK
 
 
 		int BinaryFlag;
-		byte[] VertexBinary;
+		public byte[] VertexBinary;
 
 		public Mesh3DComponentBits MeshFlag;
 
@@ -307,10 +307,10 @@ namespace BDxGraphiK
 				}
 				if ((flag & (int)Mesh3DComponentBits.Colors) > 0)
 				{
-					this.StreamRW.BinaryWriter.Write((byte)Math.Min(Math.Max(0f, this.Colors[i].R) * 255, 255));
-					this.StreamRW.BinaryWriter.Write((byte)Math.Min(Math.Max(0f, this.Colors[i].G) * 255, 255));
-					this.StreamRW.BinaryWriter.Write((byte)Math.Min(Math.Max(0f, this.Colors[i].B) * 255, 255));
-					this.StreamRW.BinaryWriter.Write((byte)Math.Min(Math.Max(0f, this.Colors[i].A) * 64, 255));
+					this.StreamRW.BinaryWriter.Write(this.Colors[i].R);
+					this.StreamRW.BinaryWriter.Write(this.Colors[i].G);
+					this.StreamRW.BinaryWriter.Write(this.Colors[i].B);
+					this.StreamRW.BinaryWriter.Write(this.Colors[i].A);
 				}
 				if ((flag & (int)Mesh3DComponentBits.Influences) > 0)
 				{

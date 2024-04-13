@@ -14,7 +14,7 @@ in float f_skinned;
 
 uniform int fog_mode;
 in vec4 f_colormultiplicator;
-uniform vec3 fog_color;
+uniform vec4 fog_color;
 uniform vec4 fog_near_far_min_max;
 
 uniform int has_patch;
@@ -45,7 +45,7 @@ uniform int patch3_index;
 void main()
 {
 	vec2 ftexcoord = f_texcoord;
-	vec4 originalcolor = texture(texture0, ftexcoord) * f_colormultiplicator;
+	vec4 originalcolor = texture(texture0, ftexcoord)*vec4(1,1,1,2) * f_colormultiplicator;
 	vec4 color = originalcolor;
 	
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
@@ -107,10 +107,10 @@ void main()
 					
 					switch (i)
 					{
-						case 0: color = texture(patch0, newLoc) * f_colormultiplicator; break;
-						case 1: color = texture(patch1, newLoc) * f_colormultiplicator; break;
-						case 2: color = texture(patch2, newLoc) * f_colormultiplicator; break;
-						case 3: color = texture(patch3, newLoc) * f_colormultiplicator; break;
+						case 0: color = texture(patch0, newLoc)*vec4(1,1,1,2) * f_colormultiplicator; break;
+						case 1: color = texture(patch1, newLoc)*vec4(1,1,1,2) * f_colormultiplicator; break;
+						case 2: color = texture(patch2, newLoc)*vec4(1,1,1,2) * f_colormultiplicator; break;
+						case 3: color = texture(patch3, newLoc)*vec4(1,1,1,2) * f_colormultiplicator; break;
 					}
 					if (color.a>0.5 && 
 						(ftexcoord.x < left
@@ -124,24 +124,6 @@ void main()
 			}
 		}
 	}
-	
-	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 1.5 && f_alphatest < 2.5) && (f_skinned > 0 || fog_mode > 0 || (color.w < 0.01 || color.w >=0.95)))
-		discard;
-	
-	if ((f_alphatest > 2.5 && f_alphatest < 3.5) && (color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 3.5 && f_alphatest < 4.5) && (fog_mode == 0 || (color.w < 0.01 || color.w >=0.95)))
-		discard;
-	
-	if ((f_alphatest > 4.5 && f_alphatest < 5.5) && (color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
-		discard;
 	
 	if (fog_mode > 0 && isnan(fog_near_far_min_max.x) == false)
 	{
@@ -169,7 +151,26 @@ void main()
 		color.x = output.x;
 		color.y = output.y;
 		color.z = output.z;
+		color *= fog_color.w;
 	}
+	
+	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 1.5 && f_alphatest < 2.5) && (f_skinned > 0 || fog_mode > 0 || (color.w < 0.01 || color.w >=0.95)))
+		discard;
+	
+	if ((f_alphatest > 2.5 && f_alphatest < 3.5) && (color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 3.5 && f_alphatest < 4.5) && (fog_mode == 0 || (color.w < 0.01 || color.w >=0.95)))
+		discard;
+	
+	if ((f_alphatest > 4.5 && f_alphatest < 5.5) && (color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
+		discard;
 	
 	
 	gl_FragColor = color;

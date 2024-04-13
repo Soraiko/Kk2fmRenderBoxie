@@ -8,7 +8,7 @@ in vec4 f_color;
 in float f_alphatest;
 uniform int fog_mode;
 in vec4 f_colormultiplicator;
-uniform vec3 fog_color;
+uniform vec4 fog_color;
 uniform vec4 fog_near_far_min_max;
 
 void main()
@@ -16,25 +16,8 @@ void main()
 	mat4 inverseViewMatrix = inverse(gl_ModelViewMatrix);
 	vec3 eyePosition = vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
 	
-	vec4 color = f_color * vec4(1,1,1,3.984375*f_colormultiplicator.w);
+	vec4 color = f_color * 2 * f_colormultiplicator;
 	
-	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 1.5 && f_alphatest < 2.5) && (fog_mode > 0 || (color.w < 0.01 || color.w >=0.95)))
-		discard;
-	
-	if ((f_alphatest > 2.5 && f_alphatest < 3.5) && (color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 3.5 && f_alphatest < 4.5) && (fog_mode == 0 || (color.w < 0.01 || color.w >=0.95)))
-		discard;
-	
-	if ((f_alphatest > 4.5 && f_alphatest < 5.5) && (color.w <0.95))
-		discard;
-	
-	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
-		discard;
 	
 	if (fog_mode > 0 && isnan(fog_near_far_min_max.x) == false)
 	{
@@ -62,8 +45,27 @@ void main()
 		color.x = output.x;
 		color.y = output.y;
 		color.z = output.z;
+		color *= fog_color.w;
 	}
 	
+	
+	if ((f_alphatest > 0.5 && f_alphatest < 1.5) && (fog_mode > 0 || color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 1.5 && f_alphatest < 2.5) && (fog_mode > 0 || (color.w < 0.01 || color.w >=0.95)))
+		discard;
+	
+	if ((f_alphatest > 2.5 && f_alphatest < 3.5) && (color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 3.5 && f_alphatest < 4.5) && (fog_mode == 0 || (color.w < 0.01 || color.w >=0.95)))
+		discard;
+	
+	if ((f_alphatest > 4.5 && f_alphatest < 5.5) && (color.w <0.95))
+		discard;
+	
+	if ((f_alphatest > 5.5 && f_alphatest < 6.5) && (color.w < 0.01 || color.w >=0.95))
+		discard;
 	
 	gl_FragColor = color;
 }

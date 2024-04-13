@@ -162,7 +162,7 @@ namespace BDxGraphiK
 
 						for (int i = 0; i < modelsArray.Length; i++)
 						{
-							if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked, transformModels.Checked, texturePatches.Checked) == false)
+							if (RAM_Model.UpdateModel(modelsArray[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked, transformModels.CheckState, texturePatches.Checked) == false)
 							{
 								modelsMemRegions.RemoveAt(models.IndexOf(modelsArray[i]));
 								models.RemoveAt(models.IndexOf(modelsArray[i]));
@@ -184,10 +184,14 @@ namespace BDxGraphiK
 
 						var bobs_array = bobs.ToArray();
 						var bobsmemregion_array = bobsMemRegions.ToArray();
+
+						//string v = "";
 						for (int i = 0; i < bobs_array.Length; i++)
 						{
-							RAM_Model.UpdateBob(stream, bobsmemregion_array[i], bobs_array[i]);
+							//v += "<CheatEntry><ID>3047</ID><Description>\""+ bobs_array[i] .Skeleton.Joints.Count+ "joints \"</Description><ShowAsHex>1</ShowAsHex><ShowAsSigned>0</ShowAsSigned><VariableType>4 Bytes</VariableType><Address>"+ bobsmemregion_array[i] .ToString("X8")+ "</Address></CheatEntry>\r\n";
+							RAM_Model.UpdateBob(stream, bobsmemregion_array[i], bobs_array[i], mapDiffuseRegions.Checked, meshSkipRenders.Checked, transformModels.CheckState);
 						}
+						//System.IO.File.WriteAllText("txt.txt", v);
 					}
 				}
 			}
@@ -239,17 +243,19 @@ namespace BDxGraphiK
 				RAM_Model[] models = this.models.ToArray();
 				for (int i = 0; i < models.Length; i++)
 				{
-					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.CheckState);
 				}
 			}
 
 			if (showBobModels.Checked)
 			{
+				GL.Disable(EnableCap.CullFace);
 				var bobs_array = bobs.ToArray();
 				for (int i = 0; i < bobs_array.Length; i++)
 				{
 					bobs_array[i].Draw(false);
 				}
+				GL.Enable(EnableCap.CullFace);
 			}
 
 			if (glControl1.RenderStep == 0)
@@ -279,7 +285,7 @@ namespace BDxGraphiK
 				RAM_Model[] models = this.models.ToArray();
 				for (int i = 0; i < models.Length; i++)
 				{
-					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.CheckState);
 				}
 			}
 		}
@@ -299,7 +305,7 @@ namespace BDxGraphiK
 				RAM_Model[] models = this.models.ToArray();
 				for (int i = 0; i < models.Length; i++)
 				{
-					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.Checked);
+					RAM_Model.DrawModel(models[i], sender as GLControl, interframeInterpolate.Checked, transformModels.CheckState);
 				}
 			}
 		}
@@ -312,7 +318,7 @@ namespace BDxGraphiK
 			if (stream == null)
 				return;
 			if (stream.ReadInt32(MDLX.RAM_Model.CAMERA_TARGET) == 0)
-				step = 1f;
+				step = 10f;
 
 			int position = 0x003A7FC0;
 			int lookAt = 0x003A7FD0;
@@ -327,12 +333,9 @@ namespace BDxGraphiK
 			Vector3 camPosition2 = new Vector3(stream.ReadSingle(position2), -stream.ReadSingle(position2 + 4), -stream.ReadSingle(position2 + 8));
 			Vector3 camLookAt2 = new Vector3(stream.ReadSingle(lookAt2), -stream.ReadSingle(lookAt2 + 4), -stream.ReadSingle(lookAt2 + 8));
 
-			if (Vector3.Distance(camPosition, camPosition2) <0.001&&
-				Vector3.Distance(camLookAt, camLookAt2) < 0.001)
-			{
-				cameraPosition += (camPosition - cameraPosition) / step;
-				cameraLookAt += (camLookAt - cameraLookAt) / step;
-			}
+
+			cameraPosition += (camPosition - cameraPosition) / step;
+			cameraLookAt += (camLookAt - cameraLookAt) / step;
 		}
 
 		System.Threading.Thread objentryThread = null;
@@ -403,6 +406,7 @@ namespace BDxGraphiK
 		{
 			if (map == null)
 				return;
+
 			int blockSize = 0x100000;
 			byte[] buffer = new byte[blockSize + 0x150];
 			int i;

@@ -20,6 +20,9 @@ using System.Windows.Forms;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Reflection;
+using BitConverter = System.BitConverter;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace BDxGraphiK
 {
@@ -81,8 +84,6 @@ namespace BDxGraphiK
 				currentModel.Meshes = new List<Mesh>(0);
 				currentModel.TextureMaterials = new List<TextureMaterial>(0);
 
-				int grayColors = 0;
-				int allColors = 0;
 				bool hasColor_ = false;
 
 				for (int j = 0; j < mdlx.models[i].Textures.Count; j++)
@@ -215,23 +216,23 @@ namespace BDxGraphiK
 					List<OpenTK.Vector2> texCoords_triBuffer = new List<OpenTK.Vector2>(0);
 					List<System.Drawing.Color> colors_triBuffer = new List<System.Drawing.Color>(0);
 					bool hasColor = alternativeMesh.colors.Count > 1;
-					if (hasColor)
-						hasColor_ = true;
+					if (hasColor) hasColor_ = true;
 					bool hasTextcoord = alternativeMesh.textureCoordinates.Count > 1;
 					List<ushort> inputIndices = new List<ushort>(0);
 
 					for (int k=0;k<alternativeMesh.triangleFlags.Count;k++)
 					{
-						System.Drawing.Color col = hasColor ? alternativeMesh.colors[k] : System.Drawing.Color.White;
 						Vector2 texCoord = hasTextcoord ? alternativeMesh.textureCoordinates[k] : Vector2.Zero;
 						tri.Add(alternativeMesh.vertexIndices[k]);
 						texCoords_triBuffer.Add(texCoord);
-						colors_triBuffer.Add(col);
+						if (hasColor)
+						colors_triBuffer.Add(alternativeMesh.colors[k]);
 
 						if (tri.Count > 3)
 						{
 							tri.RemoveAt(0);
 							texCoords_triBuffer.RemoveAt(0);
+							if (hasColor)
 							colors_triBuffer.RemoveAt(0);
 						}
 
@@ -243,9 +244,12 @@ namespace BDxGraphiK
 							textureCoords_unIndexed.Add(texCoords_triBuffer[0]);
 							textureCoords_unIndexed.Add(texCoords_triBuffer[1]);
 							textureCoords_unIndexed.Add(texCoords_triBuffer[2]);
-							colors_unIndexed.Add(colors_triBuffer[0]);
-							colors_unIndexed.Add(colors_triBuffer[1]);
-							colors_unIndexed.Add(colors_triBuffer[2]);
+							if (hasColor)
+							{
+								colors_unIndexed.Add(colors_triBuffer[0]);
+								colors_unIndexed.Add(colors_triBuffer[1]);
+								colors_unIndexed.Add(colors_triBuffer[2]);
+							}
 						}
 						if (alternativeMesh.triangleFlags[k] == 0x00 || alternativeMesh.triangleFlags[k] == 0x30)
 						{
@@ -255,9 +259,12 @@ namespace BDxGraphiK
 							textureCoords_unIndexed.Add(texCoords_triBuffer[2]);
 							textureCoords_unIndexed.Add(texCoords_triBuffer[1]);
 							textureCoords_unIndexed.Add(texCoords_triBuffer[0]);
-							colors_unIndexed.Add(colors_triBuffer[2]);
-							colors_unIndexed.Add(colors_triBuffer[1]);
-							colors_unIndexed.Add(colors_triBuffer[0]);
+							if (hasColor)
+							{
+								colors_unIndexed.Add(colors_triBuffer[2]);
+								colors_unIndexed.Add(colors_triBuffer[1]);
+								colors_unIndexed.Add(colors_triBuffer[0]);
+							}
 						}
 					}
 
@@ -265,7 +272,6 @@ namespace BDxGraphiK
 					List<List<short>> influences = new List<List<short>>(0);
 					List<Vector3> positions = new List<Vector3>(0);
 					List<Vector2> textureCoords = new List<Vector2>(0);
-					List<Vector3> normals = new List<Vector3>(0);
 					List<System.Drawing.Color> colors = new List<System.Drawing.Color>(0);
 
 					List<short> outputIndices = new List<short>(0);
@@ -274,11 +280,8 @@ namespace BDxGraphiK
 						int vertexIndex = inputIndices[l];
 						Vector3 position = positions_unIndexed[vertexIndex];
 						Vector2 textureCoord = textureCoords_unIndexed[l];
-						Vector3 normal = Vector3.UnitZ;
-						System.Drawing.Color color = System.Drawing.Color.White;
-						if (hasColor)
-							color = colors_unIndexed[l];
 
+						
 						List<KeyValuePair<short, float>> weight_influence = null;
 						if (hasController)
 							weight_influence = weight_influences[vertexIndex];
@@ -286,13 +289,12 @@ namespace BDxGraphiK
 						int foundIndex = -1;
 						for (int k = 0; k < positions.Count; k++)
 						{
-							if (colors[k].A != color.A) continue;
-							if (colors[k].R != color.R) continue;
-							if (colors[k].G != color.G) continue;
-							if (colors[k].B != color.B) continue;
+							if (hasColor && colors[k].A != colors_unIndexed[l].A) continue;
+							if (hasColor && colors[k].R != colors_unIndexed[l].R) continue;
+							if (hasColor && colors[k].G != colors_unIndexed[l].G) continue;
+							if (hasColor && colors[k].B != colors_unIndexed[l].B) continue;
 							if (Vector3.Distance(positions[k], position) > 0.0001) continue;
 							if (Vector2.Distance(textureCoords[k], textureCoord) > 0.0001) continue;
-							if (Vector3.Distance(normals[k], normal) > 0.0001) continue;
 							if (hasController && influences.Count > 0)
 							{
 								if (influences[k].Count != weight_influence.Count)
@@ -322,13 +324,10 @@ namespace BDxGraphiK
 							foundIndex = positions.Count;
 							positions.Add(position);
 							textureCoords.Add(textureCoord);
-							colors.Add(color);
-							if (hasColor && (color.R != color.G || color.G != color.B))
-							{
-								grayColors++;
-							}
-							allColors++;
-							normals.Add(normal);
+							if (hasColor)
+								colors.Add(colors_unIndexed[l]);
+
+
 							if (hasController)
 							{
 								List<short> influence = new List<short>(0);
@@ -351,13 +350,10 @@ namespace BDxGraphiK
 						mesh.Positions.Add(new Assimp.Vector3D(positions[p].X, positions[p].Y, positions[p].Z));
 						//mesh.Normals.Add(new Assimp.Vector3D(0,0,0));
 					}
-					float denominateur = 255f;
-					if (mdlx.models[i].DoubleOpacities[mesh.MaterialIndex])
-						denominateur = 128f;
 
 					if (hasColor)
 						for (int c = 0; c < colors.Count; c++)
-							mesh.Colors.Add(new Assimp.Color4D(colors[c].R / 255f, colors[c].G / 255f, colors[c].B / 255f, colors[c].A / denominateur));
+							mesh.Colors.Add(colors[c]);
 
 					for (int t = 0; t < textureCoords.Count; t++)
 						mesh.TextureCoords.Add(new Assimp.Vector3D(textureCoords[t].X, textureCoords[t].Y, 0f));
@@ -396,26 +392,11 @@ namespace BDxGraphiK
 					{
 						currentModel.QueryUniformsArrays[qu] = this.TexturePatches.Length > 0;
 					}
-					if (keypair.Key == "colormultiplicator")
-					{
-						if (/*mdlx.models[i].Name != "BOB" &&*/ hasColor_ && grayColors / (float)allColors > 0.1)
-						{
-							/*Console.WriteLine("");
-							Console.WriteLine(filename);
-							Console.WriteLine(grayColors / (float)allColors);*/
-							currentModel.Variables["ignore_multiplicator"] = true;
-						}
-					}
 				}
 
 
 				currentModel.GenerateBinary();
 				currentModel.BufferBinary();
-				foreach (Mesh m in currentModel.Meshes)
-				{
-					m.QueryUniforms.Add("glow_mesh", -1);
-					m.QueryUniformsArrays.Add(mdlx.models[i].Name == "MAP" && m.Area < 400000);
-				}
 			}
 			
 
@@ -437,7 +418,7 @@ namespace BDxGraphiK
 						if (barFile.Data.Length >= 0x55)
 						{
 							this.Variables["BackColor"] = System.Drawing.Color.FromArgb(255, barFile.Data[0x00], barFile.Data[0x01], barFile.Data[0x02]);
-							this.Variables["FogColor"] = System.Drawing.Color.FromArgb(255, barFile.Data[0x44 + 0x00], barFile.Data[0x44 + 0x01], barFile.Data[0x44 + 0x02]);
+							this.Variables["FogColor"] = new Vector4(barFile.Data[0x44 + 0x00] /255f, barFile.Data[0x44 + 0x01] / 255f, barFile.Data[0x44 + 0x02] / 255f, barFile.Data[0x44 + 0x03] / 128f);
 							this.Variables["FogNear"] = System.BitConverter.ToSingle(barFile.Data, 0x48);
 							this.Variables["FogFar"] = System.BitConverter.ToSingle(barFile.Data, 0x4C);
 							this.Variables["FogMin"] = System.BitConverter.ToSingle(barFile.Data, 0x50);
@@ -565,7 +546,7 @@ namespace BDxGraphiK
 			}
 
 
-			public void UpdateWithMemregionData(MDLX mdlx, Object3D model, bool transformModels, bool texturePatches)
+			public void UpdateWithMemregionData(MDLX mdlx, Object3D model, CheckState transformModels, bool texturePatches)
 			{
 				/*if (this.ObjentryModelName.Contains("GENTL") == false)
 					return;*/
@@ -746,15 +727,19 @@ namespace BDxGraphiK
 				int transformAttachMemRegionPointer = System.BitConverter.ToInt32(this.MemRegionData, 0x570);
 				int transformAttachBone = System.BitConverter.ToInt32(this.MemRegionData, 0x574);
 
-				if (transformAttachMemRegionPointer > 0 && transformModels == false)
+				if (transformAttachMemRegionPointer > 0)
 				{
-					rotation = new OpenTK.Quaternion(0,0,0);
-					this.Transform = Matrix4.Identity;
+					if (transformModels == CheckState.Unchecked)
+					{
+						rotation = new OpenTK.Quaternion(0, 0, 0);
+						this.Transform = Matrix4.Identity;
+					}
 				}
-				else
-					this.Transform = Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(transform[0].ExtractTranslation());
 
-				if (transformModels && transformAttachMemRegionPointer > 0)
+				this.Transform = Matrix4.CreateScale(transform[0].ExtractScale()) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(transform[0].ExtractTranslation());
+
+
+				if (transformAttachMemRegionPointer > 0)
 				{
 					int[] modelsMemRegionsArray = Program.glForm.modelsMemRegions.ToArray();
 					MDLX.RAM_Model[] modelsArray = Program.glForm.models.ToArray();
@@ -766,19 +751,11 @@ namespace BDxGraphiK
 						var model_ = modelsArray[i];
 						if (modelsMemRegionsArray[i] == transformAttachMemRegionPointer)
 						{
-							/*if (model_.ObjentryModelName.Contains("/W_") == false || System.BitConverter.ToInt32(model_.MemRegionData, 0xAF8) == this.MemoryRegionAddress)
-							{
-								int attachBone = transformAttachBone;
-								if (attachBone > model_.BonesCount)
-								{
-
-								}
-								else
-								{
-									this.Transform = model_.Matrices[attachBone] * model_.Transform;
-								}
-							}*/
 							opacity *= model_.ColorMultiplicator.W;
+							if (transformModels == CheckState.Indeterminate)
+							{
+								this.Transform = model_.Transform;
+							}
 							break;
 						}
 					}
@@ -806,7 +783,8 @@ namespace BDxGraphiK
 				this.Frame = Frame;
 				this.MaxFrame = MaxFrame;
 
-				this.ColorMultiplicator = new Vector4(this.MemRegionData[0x8BC + 0x00] / 128f, this.MemRegionData[0x8BC + 0x01] / 128f, this.MemRegionData[0x8BC + 0x02] / 128f, opacity);
+				//this.ColorMultiplicator = new Vector4(this.MemRegionData[0x8bc + 0x00] / 128f, this.MemRegionData[0x8bc + 0x01] / 128f, this.MemRegionData[0x8bc + 0x02] / 128f,opacity);
+								this.ColorMultiplicator = new Vector4(this.MemRegionData[0x620 + 0x138 +0x00] / 128f, this.MemRegionData[0x620 + 0x138 + 0x01] / 128f, this.MemRegionData[0x620 + 0x138 + 0x02] / 128f,opacity);
 				this.WorldRotation = rotation;
 			}
 
@@ -815,40 +793,96 @@ namespace BDxGraphiK
 			public int lastANBForInterpolate;
 
 
-			public static void UpdateBob(SrkProcessStream stream, int memRegion, Object3D model)
+			public static void UpdateBob(SrkProcessStream stream, int memRegion, Object3D model, bool mapDiffuseRegions, bool meshSkipRenders, CheckState transformModels)
 			{
-				byte[] buffer = new byte[0x40];
-				stream.Read(memRegion + 0x10, ref buffer);
-
+				byte[] transform_buffer = new byte[0x40];
+				stream.Read(memRegion + 0x200, ref transform_buffer);
 				Matrix4[] transform = new Matrix4[1];
-				Marshal.Copy(buffer, 0, Marshal.UnsafeAddrOfPinnedArrayElement(transform, 0), buffer.Length);
+				Marshal.Copy(transform_buffer, 0, Marshal.UnsafeAddrOfPinnedArrayElement(transform, 0), 0x40);
 
-				OpenTK.Quaternion rotation = transform[0].ExtractRotation();
-				OpenTK.Vector3 translation = transform[0].ExtractTranslation();
+				stream.Read(memRegion + 0x70, ref transform_buffer);
 
-				translation = new Vector3(translation.X, -translation.Y, -translation.Z);
-				rotation = new OpenTK.Quaternion(rotation.X, -rotation.Y, -rotation.Z, rotation.W);
+				byte[] matrices_buffer = new byte[0x40* model.Skeleton.Joints.Count];
 
-				transform[0] = Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(translation);
-				model.Skeleton.Transform = transform[0];
+				int offsetToScales = stream.ReadInt32(memRegion + 0x31C);
+				int totalMeshesCount = model.Meshes.Count;
+				for (int m = 0; m < model.Meshes.Count; m++)
+				{
+					if (model.Meshes[m].ShadowMesh != null)
+						totalMeshesCount++;
+				}
+				byte[] skipRenderBytes = new byte[model.Meshes.Count];
+				if (totalMeshesCount > 0)
+				{
+					int pos = offsetToScales - 0x10;
+					int totalCount_ = totalMeshesCount;
+					while (totalCount_ > 16)
+					{
+						totalCount_ -= 16;
+						pos -= 16;
+					}
+					stream.Read(pos, ref skipRenderBytes);
+					for (int m = 0; m < model.Meshes.Count; m++)
+					{
+						model.Meshes[m].SkipRender = (meshSkipRenders && skipRenderBytes[m] == 0);
+					}
+				}
 
 
-				buffer = new byte[model.Skeleton.Joints.Count * 0x30];
-				stream.Read(memRegion + 0x440, ref buffer);
+				int offsetToMatrices = stream.ReadInt32(memRegion + 0x328);
+
+
+				Vector3 mirrorScale = new Vector3(BitConverter.ToSingle(transform_buffer, 0), BitConverter.ToSingle(transform_buffer, 4), BitConverter.ToSingle(transform_buffer, 8));
+
+				stream.Read(offsetToMatrices, ref matrices_buffer);
 				Matrix4[] matrices = new Matrix4[model.Skeleton.Joints.Count];
-				Marshal.Copy(buffer, 0, Marshal.UnsafeAddrOfPinnedArrayElement(matrices, 0), buffer.Length);
+				Marshal.Copy(matrices_buffer, 0, Marshal.UnsafeAddrOfPinnedArrayElement(matrices, 0), 0x40 * model.Skeleton.Joints.Count);
 
-				model.Skeleton.Joints[0].Transform =
-					Matrix4.CreateScale(matrices[0][0, 0], matrices[0][0, 1], matrices[0][0, 2]) *
-					Matrix4.CreateFromQuaternion(new OpenTK.Quaternion(matrices[0][1, 0], matrices[0][1, 1], matrices[0][1, 2])) *
-					Matrix4.CreateTranslation(matrices[0][2, 0], matrices[0][2, 1], matrices[0][2, 2]);
+				
+				
+				if (transformModels == CheckState.Unchecked)
+				{
+					model.Skeleton.Transform = Matrix4.Identity;
+				}
+				else
+				{
+					OpenTK.Quaternion q = transform[0].ExtractRotation();
 
+					model.Skeleton.Transform =
+					Matrix4.CreateScale(mirrorScale) *
+					Matrix4.CreateFromQuaternion(new OpenTK.Quaternion(q.X, -q.Y, -q.Z, q.W)) *
+						Matrix4.CreateTranslation(transform[0].ExtractTranslation()*new Vector3(1,-1,-1));
+				}
+				if (transformModels == CheckState.Checked)
+				{
+					for (int i = 0; i < model.Skeleton.Joints.Count; i++)
+					{
+						model.Skeleton.Joints[i].Transform = matrices[i];
+					}
+				}
+				else
+				{
+					for (int i = 0; i < model.Skeleton.Joints.Count; i++)
+					{
+						model.Skeleton.Joints[i].Transform = model.Skeleton.InitialTransforms[i];
+					}
+				}
+
+				byte[] color_buffer = stream.Read(memRegion + 0x1CC, 4);
+				for (int qu = 0; qu < model.QueryUniforms.Count; qu++)
+				{
+					var keypair = model.QueryUniforms.ElementAt(qu);
+					if (keypair.Key == "colormultiplicator")
+					{
+						model.QueryUniformsArrays[qu] = mapDiffuseRegions ? new Vector4(color_buffer[0] / 128f, color_buffer[1] / 128f, color_buffer[1] / 128f, 1f) : Vector4.One;
+					}
+				}
 				model.Skeleton.ComputeMatrices();
 				model.Skeleton.PassComputedTransforms();
 				model.Skeleton.SendMatricesToUniformObject();
 			}
 
-			public static bool UpdateModel(RAM_Model modelRamModel, bool mapDiffuseRegions, bool meshSkipRenders, bool transformModels, bool texturePatches)
+			public static bool UpdateModel(RAM_Model modelRamModel, bool mapDiffuseRegions, bool meshSkipRenders, CheckState transformModels, bool texturePatches)
 			{
 				for (int i = 0; i < modelRamModel.Model.Models.Count; i++)
 				{
@@ -903,7 +937,7 @@ namespace BDxGraphiK
 
 							for (int m = 0; m < model.Meshes.Count; m++)
 							{
-								model.Meshes[m].SkipRender = (pos < 0 || pos + m > modelRamModel.MemRegionData.Length - 1) || (meshSkipRenders && modelRamModel.MemRegionData[pos+m] == 0);
+								model.Meshes[m].SkipRender = (meshSkipRenders && pos >= 0 && pos + m < modelRamModel.MemRegionData.Length  && modelRamModel.MemRegionData[pos+m] == 0);
 							}
 						}
 
@@ -912,7 +946,7 @@ namespace BDxGraphiK
 							var keypair = model.QueryUniforms.ElementAt(qu);
 							if (keypair.Key == "colormultiplicator")
 							{
-								model.QueryUniformsArrays[qu] = model.Variables.ContainsKey("ignore_multiplicator")==false&& mapDiffuseRegions ? modelRamModel.ColorMultiplicator : new Vector4(Vector3.One, modelRamModel.ColorMultiplicator.W);
+								model.QueryUniformsArrays[qu] = mapDiffuseRegions ? modelRamModel.ColorMultiplicator : new Vector4(Vector3.One, modelRamModel.ColorMultiplicator.W);
 							}
 						}
 						break;
@@ -922,7 +956,7 @@ namespace BDxGraphiK
 				return false;
 			}
 
-			public static void DrawModel(RAM_Model ramModel, GLControl sender, bool interframeInterpolate, bool transformModels)
+			public static void DrawModel(RAM_Model ramModel, GLControl sender, bool interframeInterpolate, CheckState transformModels)
 			{
 				for (int i=0;i< ramModel.Model.Models.Count;i++)
 				{
@@ -933,40 +967,42 @@ namespace BDxGraphiK
 						{
 							for (int m=0;m< ramModel.BonesCount;m++)
 							{
-								if (transformModels)
+								if (transformModels == CheckState.Checked && ramModel.lastANBForInterpolate == ramModel.ANBOffset && interframeInterpolate)
 								{
-									if (ramModel.lastANBForInterpolate == ramModel.ANBOffset && interframeInterpolate)
-									{
-										Matrix4 a = model.Skeleton.Joints[m].ComputedTransform;
-										Matrix4 b = (ramModel.Matrices[m] * ramModel.Transform);
+									Matrix4 a = model.Skeleton.Joints[m].ComputedTransform;
+									Matrix4 b = ramModel.Matrices[m] * ramModel.Transform;
+									Vector3 scale_a = a.ExtractScale();
+									Vector3 scale_b = b.ExtractScale();
 
-										Vector3 scale_a = a.ExtractScale();
-										Vector3 scale_b = b.ExtractScale();
+									OpenTK.Quaternion rotate_a = a.ExtractRotation();
+									OpenTK.Quaternion rotate_b = b.ExtractRotation();
 
-										OpenTK.Quaternion rotate_a = a.ExtractRotation();
-										OpenTK.Quaternion rotate_b = b.ExtractRotation();
-
-										Vector3 translate_a = a.ExtractTranslation();
-										Vector3 translate_b = b.ExtractTranslation();
+									Vector3 translate_a = a.ExtractTranslation();
+									Vector3 translate_b = b.ExtractTranslation();
 
 
-										model.Skeleton.Joints[m].ComputedTransform =
-											Matrix4.CreateScale(scale_b) *
-											Matrix4.CreateFromQuaternion(OpenTK.Quaternion.Slerp(rotate_a, rotate_b, 0.5f)) *
-											Matrix4.CreateTranslation(translate_b);
-
-
-									}
-									else
-									{
-										model.Skeleton.Joints[m].ComputedTransform = (ramModel.Matrices[m] * ramModel.Transform );
-									}
+									model.Skeleton.Joints[m].ComputedTransform =
+										Matrix4.CreateScale(scale_b) *
+										Matrix4.CreateFromQuaternion(OpenTK.Quaternion.Slerp(rotate_a, rotate_b, 0.5f)) *
+										Matrix4.CreateTranslation(translate_b);
 								}
 								else
 								{
-									model.Skeleton.Joints[m].ComputedTransform = (model.Skeleton.InitialTransforms[m] * ramModel.Transform);
+									if (transformModels == CheckState.Checked)
+									{
+										model.Skeleton.Joints[m].ComputedTransform = ramModel.Matrices[m] * ramModel.Transform;
+									}
+									else if (transformModels == CheckState.Indeterminate)
+									{
+										model.Skeleton.Joints[m].ComputedTransform = model.Skeleton.InitialTransforms[m] * ramModel.Transform;
+									}
+									else
+									{
+										model.Skeleton.Joints[m].ComputedTransform = model.Skeleton.InitialTransforms[m];
+									}
 								}
 							}
+
 
 							model.Skeleton.PassComputedTransforms();
 							model.Skeleton.SendMatricesToUniformObject();
@@ -994,22 +1030,23 @@ namespace BDxGraphiK
 								bool[] frustrums = new bool[meshes.Count];
 								if (frustrumCullingEnabled != CheckState.Unchecked)
 								{
-									if (RememberFrustrum.Length != meshes.Count)
-										RememberFrustrum = new bool[meshes.Count];
-										RememberFrustrum = new bool[meshes.Count];
-
 									if (mapRamModel.Model.Models.ElementAt(m).Key == "MAP")
 									{
-										int mapDetailsPtr = mapRamModel.ProcessStream.ReadInt32(0x01D9EAAC);
-										if (mapRamModel.ProcessStream.ReadUInt32(mapDetailsPtr + 0x25587) == 0x80808080)
+										if (RememberFrustrum.Length != meshes.Count)
+											RememberFrustrum = new bool[meshes.Count];
+										else
 										{
-											byte[] meshBytes = Program.glForm.stream.Read(mapDetailsPtr + 0x25700, meshes.Count);
-
-											for (int i = 0; i < meshBytes.Length; i++)
+											int mapDetailsPtr = mapRamModel.ProcessStream.ReadInt32(0x01D9EAAC);
+											if (mapRamModel.ProcessStream.ReadUInt32(mapDetailsPtr + 0x25587) == 0x80808080)
 											{
-												if (meshBytes[i] > 0)
+												byte[] meshBytes = Program.glForm.stream.Read(mapDetailsPtr + 0x25700, meshes.Count);
+
+												for (int i = 0; i < meshBytes.Length; i++)
 												{
-													RememberFrustrum[i] = true;
+													if (meshBytes[i] > 0)
+													{
+														RememberFrustrum[i] = true;
+													}
 												}
 											}
 										}
@@ -1038,10 +1075,10 @@ namespace BDxGraphiK
 								}
 							}
 						}
-						if (fogEnabled && mapRamModel.Model.Variables.ContainsKey("BackColor") && ((Color)mapRamModel.Model.Variables["FogColor"]).Name != "ff808080")
+						if (fogEnabled && mapRamModel.Model.Variables.ContainsKey("BackColor") && Vector3.Distance(((Vector4)mapRamModel.Model.Variables["FogColor"]).Xyz, Vector3.One*128f/255f) > 0.01)
 						{
-							sender.BackColor = (Color)mapRamModel.Model.Variables["BackColor"];
-							sender.FogColor = (Color)mapRamModel.Model.Variables["FogColor"];
+							sender.BackColor = (System.Drawing.Color)mapRamModel.Model.Variables["BackColor"];
+							sender.FogColor = (Vector4)mapRamModel.Model.Variables["FogColor"];
 							sender.FogNear = (float)mapRamModel.Model.Variables["FogNear"];
 							sender.FogFar = (float)mapRamModel.Model.Variables["FogFar"];
 							sender.FogMin = (float)mapRamModel.Model.Variables["FogMin"];
@@ -1049,8 +1086,8 @@ namespace BDxGraphiK
 						}
 						else
 						{
-							sender.BackColor = Color.Black;
-							sender.FogColor = Color.Transparent;
+							sender.BackColor = System.Drawing.Color.Black;
+							sender.FogColor = new Vector4(0,0,0,0);
 							sender.FogNear = Single.NaN;
 							sender.FogFar = 100f;
 							sender.FogMin = 0f;

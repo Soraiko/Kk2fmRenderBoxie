@@ -72,7 +72,7 @@
 			// 
 			this.glControl1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
 			this.glControl1.FarPlane = 1E+07F;
-			this.glControl1.FogColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(128)))), ((int)(((byte)(128)))));
+			this.glControl1.FogColor = ((OpenTK.Vector4)(resources.GetObject("glControl1.FogColor")));
 			this.glControl1.FogFar = 1000F;
 			this.glControl1.FogMax = 100F;
 			this.glControl1.FogMin = 0F;
@@ -93,7 +93,7 @@
 			// 
 			this.glControl2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
 			this.glControl2.FarPlane = 1E+07F;
-			this.glControl2.FogColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(128)))), ((int)(((byte)(128)))));
+			this.glControl2.FogColor = ((OpenTK.Vector4)(resources.GetObject("glControl2.FogColor")));
 			this.glControl2.FogFar = 1000F;
 			this.glControl2.FogMax = 100F;
 			this.glControl2.FogMin = 0F;
@@ -114,7 +114,7 @@
 			// 
 			this.glControl3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
 			this.glControl3.FarPlane = 1E+07F;
-			this.glControl3.FogColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(128)))), ((int)(((byte)(128)))));
+			this.glControl3.FogColor = ((OpenTK.Vector4)(resources.GetObject("glControl3.FogColor")));
 			this.glControl3.FogFar = 1000F;
 			this.glControl3.FogMax = 100F;
 			this.glControl3.FogMin = 0F;
@@ -137,7 +137,7 @@
 			this.meshSkipRenders.BackColor = System.Drawing.Color.Transparent;
 			this.meshSkipRenders.Checked = true;
 			this.meshSkipRenders.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.meshSkipRenders.Location = new System.Drawing.Point(13, 124);
+			this.meshSkipRenders.Location = new System.Drawing.Point(25, 308);
 			this.meshSkipRenders.Name = "meshSkipRenders";
 			this.meshSkipRenders.Size = new System.Drawing.Size(114, 17);
 			this.meshSkipRenders.TabIndex = 9;
@@ -150,11 +150,11 @@
 			this.frustumCulling.BackColor = System.Drawing.Color.Transparent;
 			this.frustumCulling.Checked = true;
 			this.frustumCulling.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.frustumCulling.Location = new System.Drawing.Point(13, 101);
+			this.frustumCulling.Location = new System.Drawing.Point(25, 239);
 			this.frustumCulling.Name = "frustumCulling";
-			this.frustumCulling.Size = new System.Drawing.Size(243, 17);
+			this.frustumCulling.Size = new System.Drawing.Size(266, 17);
 			this.frustumCulling.TabIndex = 8;
-			this.frustumCulling.Text = "Frustrum culling (none/cam_n_rem/remember)";
+			this.frustumCulling.Text = "Frustrum culling (Cam+Rem/Remember only/None)";
 			this.frustumCulling.ThreeState = true;
 			this.frustumCulling.UseVisualStyleBackColor = false;
 			// 
@@ -164,7 +164,7 @@
 			this.showMap.BackColor = System.Drawing.Color.Transparent;
 			this.showMap.Checked = true;
 			this.showMap.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.showMap.Location = new System.Drawing.Point(13, 147);
+			this.showMap.Location = new System.Drawing.Point(13, 193);
 			this.showMap.Name = "showMap";
 			this.showMap.Size = new System.Drawing.Size(77, 17);
 			this.showMap.TabIndex = 10;
@@ -177,7 +177,7 @@
 			this.showModels.BackColor = System.Drawing.Color.Transparent;
 			this.showModels.Checked = true;
 			this.showModels.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.showModels.Location = new System.Drawing.Point(13, 170);
+			this.showModels.Location = new System.Drawing.Point(25, 285);
 			this.showModels.Name = "showModels";
 			this.showModels.Size = new System.Drawing.Size(90, 17);
 			this.showModels.TabIndex = 11;
@@ -190,11 +190,12 @@
 			this.transformModels.BackColor = System.Drawing.Color.Transparent;
 			this.transformModels.Checked = true;
 			this.transformModels.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.transformModels.Location = new System.Drawing.Point(13, 193);
+			this.transformModels.Location = new System.Drawing.Point(14, 262);
 			this.transformModels.Name = "transformModels";
-			this.transformModels.Size = new System.Drawing.Size(109, 17);
+			this.transformModels.Size = new System.Drawing.Size(244, 17);
 			this.transformModels.TabIndex = 12;
-			this.transformModels.Text = "Transform models";
+			this.transformModels.Text = "Transform models (Compute/Local only/None)";
+			this.transformModels.ThreeState = true;
 			this.transformModels.UseVisualStyleBackColor = false;
 			// 
 			// checkBox1
@@ -217,7 +218,7 @@
 			this.mapDiffuseRegions.BackColor = System.Drawing.Color.Transparent;
 			this.mapDiffuseRegions.Checked = true;
 			this.mapDiffuseRegions.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.mapDiffuseRegions.Location = new System.Drawing.Point(13, 216);
+			this.mapDiffuseRegions.Location = new System.Drawing.Point(25, 331);
 			this.mapDiffuseRegions.Name = "mapDiffuseRegions";
 			this.mapDiffuseRegions.Size = new System.Drawing.Size(162, 17);
 			this.mapDiffuseRegions.TabIndex = 14;
@@ -246,7 +247,7 @@
 			this.fog.BackColor = System.Drawing.Color.Transparent;
 			this.fog.Checked = true;
 			this.fog.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.fog.Location = new System.Drawing.Point(13, 240);
+			this.fog.Location = new System.Drawing.Point(25, 124);
 			this.fog.Name = "fog";
 			this.fog.Size = new System.Drawing.Size(44, 17);
 			this.fog.TabIndex = 16;
@@ -273,11 +274,11 @@
 			this.mapAlphaGlow.BackColor = System.Drawing.Color.Transparent;
 			this.mapAlphaGlow.Checked = true;
 			this.mapAlphaGlow.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.mapAlphaGlow.Location = new System.Drawing.Point(13, 262);
+			this.mapAlphaGlow.Location = new System.Drawing.Point(25, 101);
 			this.mapAlphaGlow.Name = "mapAlphaGlow";
-			this.mapAlphaGlow.Size = new System.Drawing.Size(313, 17);
+			this.mapAlphaGlow.Size = new System.Drawing.Size(225, 17);
 			this.mapAlphaGlow.TabIndex = 20;
-			this.mapAlphaGlow.Text = "Map alpha channel glow (Experimental, dunno when to glow)";
+			this.mapAlphaGlow.Text = "Alpha channel bloom (Bloom/Mask/None)";
 			this.mapAlphaGlow.ThreeState = true;
 			this.mapAlphaGlow.UseVisualStyleBackColor = false;
 			// 
@@ -457,7 +458,7 @@
 			// 
 			this.interframeInterpolate.AutoSize = true;
 			this.interframeInterpolate.BackColor = System.Drawing.Color.Transparent;
-			this.interframeInterpolate.Location = new System.Drawing.Point(13, 284);
+			this.interframeInterpolate.Location = new System.Drawing.Point(25, 170);
 			this.interframeInterpolate.Name = "interframeInterpolate";
 			this.interframeInterpolate.Size = new System.Drawing.Size(236, 17);
 			this.interframeInterpolate.TabIndex = 36;
@@ -471,7 +472,7 @@
 			this.texturePatches.BackColor = System.Drawing.Color.Transparent;
 			this.texturePatches.Checked = true;
 			this.texturePatches.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.texturePatches.Location = new System.Drawing.Point(13, 329);
+			this.texturePatches.Location = new System.Drawing.Point(26, 354);
 			this.texturePatches.Name = "texturePatches";
 			this.texturePatches.Size = new System.Drawing.Size(103, 17);
 			this.texturePatches.TabIndex = 37;
@@ -484,7 +485,7 @@
 			this.smartBlending.BackColor = System.Drawing.Color.Transparent;
 			this.smartBlending.Checked = true;
 			this.smartBlending.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.smartBlending.Location = new System.Drawing.Point(13, 307);
+			this.smartBlending.Location = new System.Drawing.Point(25, 147);
 			this.smartBlending.Name = "smartBlending";
 			this.smartBlending.Size = new System.Drawing.Size(257, 17);
 			this.smartBlending.TabIndex = 38;
@@ -495,11 +496,13 @@
 			// 
 			this.showBobModels.AutoSize = true;
 			this.showBobModels.BackColor = System.Drawing.Color.Transparent;
-			this.showBobModels.Location = new System.Drawing.Point(13, 350);
+			this.showBobModels.Checked = true;
+			this.showBobModels.CheckState = System.Windows.Forms.CheckState.Checked;
+			this.showBobModels.Location = new System.Drawing.Point(25, 216);
 			this.showBobModels.Name = "showBobModels";
-			this.showBobModels.Size = new System.Drawing.Size(142, 17);
+			this.showBobModels.Size = new System.Drawing.Size(81, 17);
 			this.showBobModels.TabIndex = 39;
-			this.showBobModels.Text = "Bob models (In progress)";
+			this.showBobModels.Text = "Bob models";
 			this.showBobModels.UseVisualStyleBackColor = false;
 			// 
 			// GLForm
