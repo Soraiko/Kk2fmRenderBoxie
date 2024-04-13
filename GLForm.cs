@@ -249,13 +249,11 @@ namespace BDxGraphiK
 
 			if (showBobModels.Checked)
 			{
-				GL.Disable(EnableCap.CullFace);
 				var bobs_array = bobs.ToArray();
 				for (int i = 0; i < bobs_array.Length; i++)
 				{
 					bobs_array[i].Draw(false);
 				}
-				GL.Enable(EnableCap.CullFace);
 			}
 
 			if (glControl1.RenderStep == 0)

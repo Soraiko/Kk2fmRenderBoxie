@@ -1102,7 +1102,7 @@ namespace SrkAlternatives
 						int u_int = System.BitConverter.ToInt32(vu_memory, offset_texcoo_ind_strips + i * 0x10 + 0x00);
 						int v_int = System.BitConverter.ToInt32(vu_memory, offset_texcoo_ind_strips + i * 0x10 + 0x04);
 
-						if (v_int > 4096)
+						if (v_int > 8192)
 							v_int -= ushort.MaxValue;
 
 						float u = u_int / 4096f;

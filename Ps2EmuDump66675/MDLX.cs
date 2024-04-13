@@ -857,7 +857,7 @@ namespace BDxGraphiK
 				{
 					for (int i = 0; i < model.Skeleton.Joints.Count; i++)
 					{
-						model.Skeleton.Joints[i].Transform = matrices[i];
+						model.Skeleton.Joints[i].Transform = Matrix4.CreateScale(mirrorScale) * matrices[i];
 					}
 				}
 				else
