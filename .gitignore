@@ -4,6 +4,6 @@ obj
 bin/Debug/*.*
 bin/Debug/*.txt
 bin/Debug/content/map
-bin/Debug/content/resources
+bin/Debug/content/samples
 bin/content - Copie
 bin/Debug/content/obj
