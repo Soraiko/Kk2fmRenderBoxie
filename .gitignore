@@ -1,5 +1,9 @@
 BDxGraphiK
 BDxGraphiK/*
 obj
+bin/Debug/*.*
+bin/Debug/*.txt
 bin/Debug/content/map
+bin/Debug/content/resources
+bin/content - Copie
 bin/Debug/content/obj
